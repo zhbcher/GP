@@ -28,6 +28,12 @@ class TencentSource(BaseDataSource):
                     return resp.text
 
             text = await _fetch()
+            # Map bare code from response back to the requested code (e.g. "600900" -> "sh600900")
+            requested_by_bare = {}
+            for req in codes:
+                bare = req[2:] if req[:2] in ("sh", "sz", "bj") else req
+                requested_by_bare[bare] = req
+
             result = {}
             for line in text.strip().split(";"):
                 if "=" not in line:
@@ -37,7 +43,7 @@ class TencentSource(BaseDataSource):
                 if len(fields) < 45:
                     continue
 
-                code = fields[2]
+                code = requested_by_bare.get(fields[2], fields[2])
                 result[code] = {
                     "price": float(fields[3]) if fields[3] else 0,
                     "change_pct": float(fields[32]) if fields[32] else 0,

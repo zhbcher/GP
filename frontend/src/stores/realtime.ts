@@ -19,7 +19,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const key = getAccessKey()
-    const wsUrl = `${protocol}//${window.location.host}/ws/quote${key ? `?key=***}` : ''}`
+    const wsUrl = protocol + '//' + window.location.host + '/ws/quote' + (key ? '?key=' + encodeURIComponent(key) : '')
     const socket = new WebSocket(wsUrl)
     ws.value = socket
 

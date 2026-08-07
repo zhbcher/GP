@@ -47,10 +47,11 @@ async def get_kline(
             )
 
     if period == "daily":
+        # Take the LATEST `limit` bars: order desc + limit, then reverse to ascending
         q = (
             select(KlineData)
             .where(KlineData.stock_code == code)
-            .order_by(KlineData.trade_date)
+            .order_by(KlineData.trade_date.desc())
             .limit(limit)
         )
     else:
@@ -61,7 +62,9 @@ async def get_kline(
         )
     
     result = await db.execute(q)
-    rows = result.scalars().all()
+    rows = list(result.scalars().all())
+    if period == "daily":
+        rows.reverse()  # restore ascending date order
 
     if not rows:
         return KlineResponse(code=code, name=code, period=period, adjust=adjust, data=[], count=0)
