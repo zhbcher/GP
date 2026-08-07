@@ -161,6 +161,16 @@ async def info_cache_warmup():
     logger.info(f"Info cache warmup done for {min(len(codes), 20)} stocks")
 
 
+async def daily_report_job():
+    """F1: 盘后日报 — 15:35 生成并推送飞书。"""
+    from app.services.daily_report import send_daily_report
+    try:
+        result = await send_daily_report()
+        logger.info(f"Daily report sent, pushed={result.get('pushed')}")
+    except Exception as e:
+        logger.error(f"Daily report job failed: {e}")
+
+
 async def prediction_eval_job():
     """Evaluate due predictions and update model accuracy (D2)."""
     from app.services.prediction_eval import evaluate_due_predictions
@@ -203,6 +213,18 @@ def start_scheduler():
         trigger=CronTrigger(hour=16, minute=5, day_of_week="mon-fri"),
         id="prediction_eval_job",
         name="Daily prediction evaluation",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+        max_instances=1,
+    )
+
+    # F1: 盘后日报（15:35，收盘数据同步后）
+    scheduler.add_job(
+        daily_report_job,
+        trigger=CronTrigger(hour=15, minute=35, day_of_week="mon-fri"),
+        id="daily_report_job",
+        name="Daily after-market report",
         replace_existing=True,
         misfire_grace_time=7200,
         coalesce=True,
