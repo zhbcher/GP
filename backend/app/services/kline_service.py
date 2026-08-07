@@ -1,3 +1,4 @@
+import bisect
 from datetime import datetime, timezone, timedelta
 from typing import List
 from app.schemas import KlineDataRead
@@ -70,16 +71,26 @@ def compute_adjusted(
     if not factors:
         return data
 
-    # Find latest factor for forward adjustment
-    dates = sorted(factors.keys())
+    # factors dict holds ex-dividend event dates with the RAW cumulative product
+    # factor = prod(coeff for events on/before date), NOT normalized. Each coeff < 1
+    # so factor decreases over time (latest event = smallest). factor_for(date) gives
+    # the product of all events on/before that date (1.0 before the first event).
+    event_dates = sorted(factors.keys())
+
+    def factor_for(date_key: str) -> float:
+        idx = bisect.bisect_right(event_dates, date_key)
+        if idx == 0:
+            return 1.0  # no event on/before this date
+        return factors[event_dates[idx - 1]]
+
     if adjust == "qfq":
-        latest_factor = factors[dates[-1]]
+        # Anchor latest price = actual. Total product T = factor of latest event.
+        # qfq(d) = raw(d) * (product of events AFTER d) = raw(d) * T / factor_for(d)
+        latest_factor = factors[event_dates[-1]]
         result = []
         for d in data:
-            factor = factors.get(
-                datetime.fromtimestamp(d.timestamp // 1000, tz=timezone.utc).strftime("%Y-%m-%d"), 1.0
-            )
-            ratio = latest_factor / factor if factor else 1.0
+            date_key = datetime.fromtimestamp(d.timestamp // 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+            ratio = latest_factor / factor_for(date_key)
             result.append(KlineDataRead(
                 timestamp=d.timestamp,
                 open=round(d.open * ratio, 2),
@@ -90,17 +101,18 @@ def compute_adjusted(
                 turnover=d.turnover,
             ))
         return result
-    else:  # hfq
+    else:  # hfq: anchor oldest price = actual
+        # hfq(d) = raw(d) / (product of events on/before d)
         result = []
         for d in data:
             date_key = datetime.fromtimestamp(d.timestamp // 1000, tz=timezone.utc).strftime("%Y-%m-%d")
-            factor = factors.get(date_key, 1.0)
+            ratio = 1.0 / factor_for(date_key)
             result.append(KlineDataRead(
                 timestamp=d.timestamp,
-                open=round(d.open * factor, 2),
-                high=round(d.high * factor, 2),
-                low=round(d.low * factor, 2),
-                close=round(d.close * factor, 2),
+                open=round(d.open * ratio, 2),
+                high=round(d.high * ratio, 2),
+                low=round(d.low * ratio, 2),
+                close=round(d.close * ratio, 2),
                 volume=d.volume,
                 turnover=d.turnover,
             ))

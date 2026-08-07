@@ -3,6 +3,7 @@ Data sync service.
 Fetches K-line data from external sources and stores in DB.
 """
 import logging
+import asyncio
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,7 @@ from sqlalchemy import select, insert, delete
 from app.db import async_session_maker
 from app.models.kline_data import KlineData
 from app.models.adjust_factor import AdjustFactor
+from app.models.kline_adjusted import KlineAdjusted
 from app.data_sources.manager import manager
 from app.data_sources.mootdx_source import MootdxSource
 
@@ -100,3 +102,82 @@ async def sync_watchlist() -> dict:
         results.append(result)
 
     return {"synced": len(results), "results": results}
+
+
+def _to_ak_symbol(stock_code: str) -> str:
+    """'sh600519' -> '600519' (akshare uses bare 6-digit codes)."""
+    return stock_code[2:] if len(stock_code) == 8 else stock_code
+
+
+def _fetch_akshare_hist(symbol: str, adjust: str) -> list[dict]:
+    """Fetch full-history adjusted daily K-line from eastmoney.
+
+    Eastmoney blocks Python TLS fingerprints (RemoteDisconnected), but system
+    curl passes, so we shell out to curl and parse the JSON ourselves.
+    """
+    import json
+    import subprocess
+
+    market = "1" if symbol.startswith("6") else "0"
+    fqt = "1" if adjust == "qfq" else "2"
+    url = (
+        "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+        f"?fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
+        f"&klt=101&fqt={fqt}&secid={market}.{symbol}&beg=19900101&end=20500101"
+        f"&ut=7eea3edcaed734bea9cbfc24409ed989"
+    )
+    out = subprocess.run(
+        ["curl", "-s", "--max-time", "60", url],
+        capture_output=True, timeout=90,
+    )
+    payload = json.loads(out.stdout.decode("utf-8", "replace"))
+    klines = (payload.get("data") or {}).get("klines") or []
+    rows = []
+    for line in klines:
+        parts = line.split(",")
+        rows.append({
+            "trade_date": parts[0],
+            "open": float(parts[1]),
+            "close": float(parts[2]),
+            "high": float(parts[3]),
+            "low": float(parts[4]),
+            "volume": int(float(parts[5])),
+            "amount": float(parts[6]),
+        })
+    return rows
+
+
+async def sync_adjusted_kline(stock_code: str, adj_type: str) -> dict:
+    """Fetch authoritative qfq/hfq daily K-line from akshare and cache in kline_adjusted.
+
+    Full-history pull; safe to re-run (OR REPLACE upsert). ~1 request per stock.
+    """
+    if adj_type not in ("qfq", "hfq"):
+        return {"stock_code": stock_code, "status": "error", "message": f"bad adj_type {adj_type}"}
+
+    symbol = _to_ak_symbol(stock_code)
+    loop = asyncio.get_event_loop()
+    try:
+        rows = await loop.run_in_executor(None, _fetch_akshare_hist, symbol, adj_type)
+    except Exception as e:
+        logger.error(f"akshare {adj_type} fetch failed for {stock_code}: {e}")
+        return {"stock_code": stock_code, "status": "error", "message": str(e)}
+
+    if not rows:
+        return {"stock_code": stock_code, "status": "empty", "message": "akshare returned no data"}
+
+    async with async_session_maker() as db:
+        for r in rows:
+            stmt = (
+                insert(KlineAdjusted)
+                .values(stock_code=stock_code, trade_date=r["trade_date"], adj_type=adj_type, **{
+                    "open": r["open"], "high": r["high"], "low": r["low"],
+                    "close": r["close"], "volume": r["volume"], "amount": r["amount"],
+                })
+                .prefix_with("OR REPLACE")
+            )
+            await db.execute(stmt)
+        await db.commit()
+
+    logger.info(f"Synced {len(rows)} {adj_type} bars for {stock_code}")
+    return {"stock_code": stock_code, "status": "ok", "adj_type": adj_type, "bars": len(rows)}

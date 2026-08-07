@@ -1,11 +1,13 @@
 """
 mootdx data source — 通达信 TCP 协议（K线/实时报价）
-API: mootdx.quotes.Quotes.factory(market='std')
+连接: tdx_client()（a-stock-data v3.6.0 健壮工厂：显式服务器列表+真实取数验活+多级回退）
+API:
   - bars(symbol, frequency, offset) → DataFrame[open, close, high, low, vol, amount, datetime]
   - quotes(symbol=[codes]) → DataFrame[code, price, last_close, open, high, low, vol, ...]
 frequency 映射: 9=日K, 5=周K, 6=月K, 11=年K
 """
 from app.data_sources.manager import BaseDataSource, DataSourceError
+from app.data_sources.tdx_client import tdx_client
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,8 +37,7 @@ class MootdxSource(BaseDataSource):
 
     def _get_client(self):
         if self._client is None:
-            from mootdx.quotes import Quotes
-            self._client = Quotes.factory(market="std")
+            self._client = tdx_client(market="std")
         return self._client
 
     def _check_available(self) -> bool:
@@ -225,15 +226,23 @@ class MootdxSource(BaseDataSource):
             raise DataSourceError(f"mootdx realtime: {e}")
 
     async def fetch_adjust_factors(self, code: str) -> list[dict]:
-        """Compute adjust factors from mootdx xdxr (除权除息) data.
-        factor = cumulative adjustment factor (latest = 1.0)
-        Uses dividend (fenhong) and bonus shares (songzhuangu) to calculate.
+        """Compute exact cumulative adjust factors from mootdx xdxr (除权除息).
+
+        For each ex-dividend event the price ratio is:
+            coeff = (prev_close - fenhong + peigujia*peigu)
+                    / (prev_close * (1 + songzhuangu + peigu))
+        where prev_close is the real close of the last bar before the ex-date.
+
+        Returns one entry per event date with the RAW cumulative product
+        factor = prod(coeff for events on/before date) (latest < 1, oldest events
+        smallest). Callers must NOT normalize: qfq ratio = latest/factor,
+        hfq ratio = 1/factor.
         """
         if not self._check_available():
             raise DataSourceError("mootdx not available")
 
         import asyncio
-        from datetime import datetime, timezone
+        import math
 
         def _compute():
             client = self._get_client()
@@ -242,39 +251,69 @@ class MootdxSource(BaseDataSource):
             if df is None or df.empty:
                 return []
 
-            # Filter dividend events (category=1: 除权除息)
-            dividends = df[df['category'] == 1].copy()
-            if dividends.empty:
+            # Dividend/split events (category=1: 除权除息)
+            events = df[df['category'] == 1].copy()
+            if events.empty:
                 return []
 
-            # Sort by date ascending
-            dividends['date'] = dividends.apply(
+            events['date'] = events.apply(
                 lambda r: f"{int(r['year'])}-{int(r['month']):02d}-{int(r['day']):02d}", axis=1
             )
-            dividends = dividends.sort_values('date')
+            events = events.sort_values('date')
 
-            # Calculate cumulative factor (backwards from latest)
-            # factor = product of (1 - dividend/close) for each dividend event
-            # For simplicity, use fenhong (每股分红) directly
+            # Full-history daily closes from mootdx (independent of DB cache)
+            bars = self._fetch_bars(code, frequency=9, count=20000)
+            closes = {}  # 'YYYY-MM-DD' -> close
+            for b in bars:
+                from datetime import datetime as _dt, timezone as _tz
+                d = _dt.fromtimestamp(b["timestamp"] / 1000, tz=_tz.utc).strftime("%Y-%m-%d")
+                closes[d] = b["close"]
+            sorted_dates = sorted(closes.keys())
+
+            import bisect
+
+            def _f(row, col) -> float:
+                v = row.get(col)
+                if v is None:
+                    return 0.0
+                try:
+                    v = float(v)
+                except (TypeError, ValueError):
+                    return 0.0
+                return 0.0 if math.isnan(v) else v
+
             factors = []
-            cum_factor = 1.0
-            for _, row in dividends.iterrows():
-                fenhong = float(row.get('fenhong', 0) or 0)
-                if fenhong > 0:
-                    # Approximate: factor adjustment = 1 / (1 + dividend_yield)
-                    # We don't have close price here, so use a simplified model
-                    # In practice, this should match the qfq calculation
-                    cum_factor *= (1 - fenhong / 1000)  # rough approximation
-                factors.append({
-                    'trade_date': row['date'],
-                    'factor': round(cum_factor, 6),
-                })
+            cum = 1.0
+            for _, row in events.iterrows():
+                ex_date = row['date']
+                # mootdx xdxr units: all per-10-share (每10股):
+                # fenhong/peigujia = yuan per 10 shares, songzhuangu/peigu = shares per 10 shares
+                fenhong = _f(row, 'fenhong') / 10.0
+                songzhuan = _f(row, 'songzhuangu') / 10.0
+                peigujia = _f(row, 'peigujia') / 10.0
+                peigu = _f(row, 'peigu') / 10.0
 
-            # Normalize: latest factor = 1.0
-            if factors:
-                latest = factors[-1]['factor']
-                for f in factors:
-                    f['factor'] = round(f['factor'] / latest, 6)
+                if fenhong == 0 and songzhuan == 0 and peigu == 0:
+                    continue
+
+                # prev_close: last bar strictly before ex_date
+                idx = bisect.bisect_left(sorted_dates, ex_date)
+                if idx == 0:
+                    continue  # no history before this event, cannot compute
+                prev_close = closes[sorted_dates[idx - 1]]
+                if prev_close <= 0:
+                    continue
+
+                adj_price = prev_close - fenhong + peigujia * peigu
+                denom = prev_close * (1 + songzhuan + peigu)
+                if denom <= 0:
+                    continue
+                coeff = adj_price / denom
+                if not (0 < coeff < 1):
+                    continue  # sanity guard: ex-rights must discount
+
+                cum *= coeff
+                factors.append({'trade_date': ex_date, 'factor': round(cum, 12)})
 
             return factors
 

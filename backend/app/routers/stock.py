@@ -81,14 +81,10 @@ async def get_kline(
         for row in rows
     ]
 
-    # Fetch adjust factors if needed
+    # Fetch adjust factors if needed (all events; applied as-of below)
     factors = {}
     if adjust in ("qfq", "hfq"):
-        dates = [r.trade_date for r in rows]
-        q2 = select(AdjustFactor).where(
-            AdjustFactor.stock_code == code,
-            AdjustFactor.trade_date.in_(dates),
-        )
+        q2 = select(AdjustFactor).where(AdjustFactor.stock_code == code)
         res2 = await db.execute(q2)
         for f in res2.scalars().all():
             factors[f.trade_date] = f.factor

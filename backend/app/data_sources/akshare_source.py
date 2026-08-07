@@ -203,13 +203,13 @@ class AkshareSource(BaseDataSource):
     async def search_stocks(self, keyword: str, limit: int = 20) -> list[dict]:
         """Search stocks using mootdx TCP stock list (bypasses proxy issues)."""
         try:
-            from mootdx.quotes import Quotes
+            from app.data_sources.tdx_client import tdx_client
             import asyncio
 
             loop = asyncio.get_event_loop()
 
             def _fetch():
-                client = Quotes.factory(market="std")
+                client = tdx_client(market="std")
                 df_sh = client.stocks(market=1)
                 df_sz = client.stocks(market=0)
                 return df_sh, df_sz
