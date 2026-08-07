@@ -206,10 +206,18 @@ class XGBoostPredictor:
                 .order_by(KlineData.trade_date.desc()).limit(100)
             )
             rows = list(result.scalars().all())
-            rows.reverse()
+        rows.reverse()
+        return self._predict_from_rows(rows, days)
+
+    def _predict_from_rows(self, rows, days: int = 5) -> dict:
+        import xgboost as xgb
+        import numpy as np
 
         if len(rows) < 60:
             return {"up_probability": 0.5, "signal": "hold", "status": "insufficient_data"}
+
+        if self.global_model is None:
+            return {"up_probability": 0.5, "signal": "hold", "status": "not_trained"}
 
         closes = [r.close for r in rows]
         highs = [r.high for r in rows]

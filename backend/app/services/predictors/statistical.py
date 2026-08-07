@@ -16,56 +16,58 @@ class StatisticalPredictor:
                 .order_by(KlineData.trade_date.desc()).limit(150)
             )
             rows = list(result.scalars().all())
-            rows.reverse()
+        rows.reverse()
+        return self._predict_from_rows(rows, days)
 
-            if len(rows) < 30:
-                return {"forecast": [], "status": "insufficient_data"}
+    def _predict_from_rows(self, rows, days: int = 5) -> dict:
+        if len(rows) < 30:
+            return {"forecast": [], "status": "insufficient_data"}
 
-            closes = [r.close for r in rows]
-            from datetime import datetime, timedelta
-            dates = [r.trade_date for r in rows]
-            last_date = datetime.strptime(str(dates[-1]), '%Y-%m-%d').date() if isinstance(dates[-1], str) else dates[-1]
-            current_price = closes[-1]
+        closes = [r.close for r in rows]
+        from datetime import datetime, timedelta
+        dates = [r.trade_date for r in rows]
+        last_date = datetime.strptime(str(dates[-1]), '%Y-%m-%d').date() if isinstance(dates[-1], str) else dates[-1]
+        current_price = closes[-1]
 
-            # 1. 线性回归（近 60 日）
-            reg_result = self._linear_regression(closes[-60:], days)
+        # 1. 线性回归（近 60 日）
+        reg_result = self._linear_regression(closes[-60:], days)
 
-            # 2. 指数平滑
-            smooth_result = self._exponential_smoothing(closes, days)
+        # 2. 指数平滑
+        smooth_result = self._exponential_smoothing(closes, days)
 
-            # 3. 综合
-            forecast = []
-            for i in range(days):
-                reg_price = reg_result["forecast"][i]
-                smooth_price = smooth_result["forecast"][i]
-                price = round(0.4 * reg_price + 0.6 * smooth_price, 2)
-                # 使用实际日期（外推）
-                next_date = (last_date + timedelta(days=i + 1)).strftime('%Y-%m-%d')
-                forecast.append({"date": str(next_date), "price": price})
+        # 3. 综合
+        forecast = []
+        for i in range(days):
+            reg_price = reg_result["forecast"][i]
+            smooth_price = smooth_result["forecast"][i]
+            price = round(0.4 * reg_price + 0.6 * smooth_price, 2)
+            # 使用实际日期（外推）
+            next_date = (last_date + timedelta(days=i + 1)).strftime('%Y-%m-%d')
+            forecast.append({"date": str(next_date), "price": price})
 
-            # 置信区间
-            line_vals = reg_result["line_values"]
-            if line_vals and len(closes[-60:]) > 0:
-                min_len = min(len(closes[-60:]), len(line_vals))
-                residuals = [abs(closes[-60:][i] - line_vals[i]) for i in range(min_len)]
-                mae = sum(residuals) / len(residuals) if residuals else current_price * 0.02
-            else:
-                mae = current_price * 0.02
-            range_low = round(min(f["price"] for f in forecast) - 2 * mae, 2)
-            range_high = round(max(f["price"] for f in forecast) + 2 * mae, 2)
+        # 置信区间
+        line_vals = reg_result["line_values"]
+        if line_vals and len(closes[-60:]) > 0:
+            min_len = min(len(closes[-60:]), len(line_vals))
+            residuals = [abs(closes[-60:][i] - line_vals[i]) for i in range(min_len)]
+            mae = sum(residuals) / len(residuals) if residuals else current_price * 0.02
+        else:
+            mae = current_price * 0.02
+        range_low = round(min(f["price"] for f in forecast) - 2 * mae, 2)
+        range_high = round(max(f["price"] for f in forecast) + 2 * mae, 2)
 
-            trend = "up" if forecast[-1]["price"] > current_price else "down" if forecast[-1]["price"] < current_price else "sideways"
+        trend = "up" if forecast[-1]["price"] > current_price else "down" if forecast[-1]["price"] < current_price else "sideways"
 
-            return {
-                "forecast": forecast,
-                "range_low": range_low,
-                "range_high": range_high,
-                "r2": round(reg_result["r2"], 4),
-                "trend": trend,
-                "mae": round(mae, 2),
-                "status": "ok",
-                "current_price": round(current_price, 2)
-            }
+        return {
+            "forecast": forecast,
+            "range_low": range_low,
+            "range_high": range_high,
+            "r2": round(reg_result["r2"], 4),
+            "trend": trend,
+            "mae": round(mae, 2),
+            "status": "ok",
+            "current_price": round(current_price, 2)
+        }
 
     def _linear_regression(self, data: list, days: int) -> dict:
         n = len(data)

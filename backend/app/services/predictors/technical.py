@@ -25,7 +25,9 @@ class TechnicalPredictor:
             )
             rows = list(result.scalars().all())
         rows.reverse()  # 时间升序
+        return self._predict_from_rows(rows, days)
 
+    def _predict_from_rows(self, rows, days: int = 5) -> dict:
         if len(rows) < 60:
             return {
                 "trend": "unknown",

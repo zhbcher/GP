@@ -1,0 +1,56 @@
+{
+  "5": {
+    "technical": {
+      "total": 2943,
+      "correct": 1463,
+      "accuracy": 0.4971
+    },
+    "statistical": {
+      "total": 3440,
+      "correct": 1704,
+      "accuracy": 0.4953
+    },
+    "monte_carlo": {
+      "total": 1170,
+      "correct": 620,
+      "accuracy": 0.5299
+    },
+    "patterns": {
+      "total": 2782,
+      "correct": 1403,
+      "accuracy": 0.5043
+    },
+    "xgboost": {
+      "total": 2540,
+      "correct": 1434,
+      "accuracy": 0.5646
+    }
+  },
+  "10": {
+    "technical": {
+      "total": 3043,
+      "correct": 1521,
+      "accuracy": 0.4998
+    },
+    "statistical": {
+      "total": 3574,
+      "correct": 1800,
+      "accuracy": 0.5036
+    },
+    "monte_carlo": {
+      "total": 1627,
+      "correct": 823,
+      "accuracy": 0.5058
+    },
+    "patterns": {
+      "total": 2875,
+      "correct": 1443,
+      "accuracy": 0.5019
+    },
+    "xgboost": {
+      "total": 2655,
+      "correct": 1448,
+      "accuracy": 0.5454
+    }
+  }
+}

@@ -15,51 +15,53 @@ class PatternRecognizer:
                 .order_by(KlineData.trade_date.desc()).limit(150)
             )
             rows = list(result.scalars().all())
-            rows.reverse()
+        rows.reverse()
+        return self._predict_from_rows(rows, days)
 
-            if len(rows) < 60:
-                return {"patterns": [], "support": [], "resistance": [], "status": "insufficient_data"}
+    def _predict_from_rows(self, rows, days: int = 5) -> dict:
+        if len(rows) < 60:
+            return {"patterns": [], "support": [], "resistance": [], "status": "insufficient_data"}
 
-            closes = [r.close for r in rows]
-            highs = [r.high for r in rows]
-            lows = [r.low for r in rows]
-            opens = [r.open for r in rows]
-            dates = [r.trade_date for r in rows]
-            current_price = closes[-1]
+        closes = [r.close for r in rows]
+        highs = [r.high for r in rows]
+        lows = [r.low for r in rows]
+        opens = [r.open for r in rows]
+        dates = [r.trade_date for r in rows]
+        current_price = closes[-1]
 
-            patterns = []
+        patterns = []
 
-            # 1. 双底 / 双顶
-            double_pattern = self._detect_double(highs, lows, closes, dates)
-            if double_pattern:
-                patterns.append(double_pattern)
+        # 1. 双底 / 双顶
+        double_pattern = self._detect_double(highs, lows, closes, dates)
+        if double_pattern:
+            patterns.append(double_pattern)
 
-            # 2. 头肩顶 / 头肩底
-            head_shoulder = self._detect_head_shoulder(highs, lows, closes, dates)
-            if head_shoulder:
-                patterns.append(head_shoulder)
+        # 2. 头肩顶 / 头肩底
+        head_shoulder = self._detect_head_shoulder(highs, lows, closes, dates)
+        if head_shoulder:
+            patterns.append(head_shoulder)
 
-            # 3. 旗形 / 三角整理
-            flag = self._detect_flag(highs, lows, closes, dates)
-            if flag:
-                patterns.append(flag)
+        # 3. 旗形 / 三角整理
+        flag = self._detect_flag(highs, lows, closes, dates)
+        if flag:
+            patterns.append(flag)
 
-            # 4. 吞没形态（最近 10 根）
-            engulfing = self._detect_engulfing(opens, closes, dates, len(rows) - 10, len(rows))
-            if engulfing:
-                patterns.extend(engulfing)
+        # 4. 吞没形态（最近 10 根）
+        engulfing = self._detect_engulfing(opens, closes, dates, len(rows) - 10, len(rows))
+        if engulfing:
+            patterns.extend(engulfing)
 
-            # 5. 支撑 / 阻力位
-            support, resistance = self._find_support_resistance(highs, lows, current_price)
+        # 5. 支撑 / 阻力位
+        support, resistance = self._find_support_resistance(highs, lows, current_price)
 
-            return {
-                "patterns": patterns,
-                "support": support,
-                "resistance": resistance,
-                "status": "ok",
-                "current_price": round(current_price, 2),
-                "data_date": str(dates[-1])
-            }
+        return {
+            "patterns": patterns,
+            "support": support,
+            "resistance": resistance,
+            "status": "ok",
+            "current_price": round(current_price, 2),
+            "data_date": str(dates[-1])
+        }
 
     def _detect_double(self, highs: list, lows: list, closes: list, dates: list) -> dict | None:
         """检测双底/双顶。"""
