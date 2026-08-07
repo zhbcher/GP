@@ -1,0 +1,9 @@
+{
+  "_说明": "用 NVIDIA API（OpenAI 兼容）做翻译+要点。",
+  "provider": "api",
+  "api": {
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "api_key": "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",
+    "model": "stepfun-ai/step-3.7-flash"
+  }
+}

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+
+# 数据库（二进制大文件，不进 git；备份走 backup 路由）
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 日志
+*.log
+investment-news/logs/
+
+# 环境与密钥
+.env
+.env.*
+llm.config.local.json
+
+# 系统文件
+.DS_Store
+*.swp

@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: .
+      target: backend
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/stock.db
+      - DEBUG=false
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      target: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
