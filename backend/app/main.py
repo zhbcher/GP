@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.db import engine, Base, async_session_maker
 from app.auth import auth_middleware_handler
-from app.routers import health, search, stock, watchlist, drawings, annotations, ws, sync, alerts, positions, backup, auth, info, market, news, journal, chips, screen, data_io, predict
+from app.routers import health, search, stock, watchlist, drawings, annotations, ws, sync, alerts, positions, backup, auth, info, market, news, journal, chips, screen, data_io, predict, predict_acc
 from app.services.realtime_service import connection_manager, get_realtime_quotes
 from app.data_sources.manager import manager, DataSourceError
 from app.data_sources.mootdx_source import MootdxSource
@@ -22,6 +22,8 @@ from app.data_sources.easyquotation_source import EasyquotationSource
 from app.data_sources.tencent_source import TencentSource
 from app.scheduler import start_scheduler, stop_scheduler, startup_freshness_check
 from app.models.news import NewsItem  # noqa: F401 — ensure table creation
+from app.models.kline_adjusted import KlineAdjusted  # noqa: F401 — ensure table creation
+from app.models.prediction_record import PredictionRecord  # noqa: F401 — ensure table creation (D1)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -292,6 +294,7 @@ app.include_router(chips.router)
 app.include_router(screen.router)
 app.include_router(data_io.router)
 app.include_router(predict.router)
+app.include_router(predict_acc.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -161,6 +161,16 @@ async def info_cache_warmup():
     logger.info(f"Info cache warmup done for {min(len(codes), 20)} stocks")
 
 
+async def prediction_eval_job():
+    """Evaluate due predictions and update model accuracy (D2)."""
+    from app.services.prediction_eval import evaluate_due_predictions
+    try:
+        result = await evaluate_due_predictions()
+        logger.info(f"Prediction eval job done: {result}")
+    except Exception as e:
+        logger.error(f"Prediction eval job failed: {e}")
+
+
 def start_scheduler():
     """Start the scheduler with daily update jobs."""
     # Daily K-line update at 15:30 (Mon-Fri)
@@ -181,6 +191,18 @@ def start_scheduler():
         trigger=CronTrigger(hour=16, minute=0, day_of_week="mon-fri"),
         id="data_integrity_check",
         name="Daily data integrity check",
+        replace_existing=True,
+        misfire_grace_time=7200,
+        coalesce=True,
+        max_instances=1,
+    )
+
+    # D2: 到期预测评估（16:05，紧接数据完整性检查之后）
+    scheduler.add_job(
+        prediction_eval_job,
+        trigger=CronTrigger(hour=16, minute=5, day_of_week="mon-fri"),
+        id="prediction_eval_job",
+        name="Daily prediction evaluation",
         replace_existing=True,
         misfire_grace_time=7200,
         coalesce=True,

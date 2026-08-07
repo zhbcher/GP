@@ -47,6 +47,15 @@ async def predict_stock(code: str, days: int = 5, db: AsyncSession = Depends(get
     except Exception as e:
         ensemble_result = {"error": str(e), "status": "error"}
 
+    # D1: 落库预测记录（fire-and-forget，失败不阻塞主流程）
+    try:
+        from app.services.prediction_store import record_prediction
+        all_for_store = dict(models)
+        all_for_store["ensemble"] = ensemble_result
+        asyncio.create_task(record_prediction(code, days, all_for_store))
+    except Exception as e:
+        logger.warning(f"prediction persist skipped: {e}")
+
     return {
         "code": code,
         "current_price": 0,
