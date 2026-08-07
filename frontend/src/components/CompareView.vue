@@ -53,7 +53,8 @@ function toggleStock(stock: { stock_code: string; stock_name: string }) {
   }
 
   if (selectedStocks.value.length >= 2) {
-    loadChartData()
+    if (viewMode.value === 'overlay') loadOverlayData()
+    else loadChartData()
   } else if (charts.length > 0) {
     destroyCharts()
   }
@@ -246,7 +247,8 @@ function syncOtherCharts(sourceIdx: number) {
 
 function onPeriodChange(p: PeriodType) {
   period.value = p
-  loadChartData()
+  if (viewMode.value === 'overlay') loadOverlayData()
+  else loadChartData()
 }
 
 function onResize() {
@@ -255,8 +257,137 @@ function onResize() {
   }
 }
 
+// ===== G1: 归一化叠加对比模式 =====
+const viewMode = ref<'grid' | 'overlay'>('grid')
+interface OverlaySeries { code: string; name: string; color: string; ts: number[]; pct: number[] }
+const overlaySeries = ref<OverlaySeries[]>([])
+const overlayLoading = ref(false)
+const overlayCanvasRef = ref<HTMLDivElement | null>(null)
+const COMPARE_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#eab308']
+const hoverIdx = ref<number | null>(null)
+
+const overlayRender = ref<{
+  w: number; h: number;
+  paths: { color: string; d: string; name: string; last: number }[];
+  yTicks: { y: number; label: string }[];
+  xTicks: { x: number; label: string }[];
+  zeroY: number | null;
+  baseTs: number[];
+}>({ w: 800, h: 400, paths: [], yTicks: [], xTicks: [], zeroY: null, baseTs: [] })
+
+async function loadOverlayData() {
+  if (selectedStocks.value.length < 2) return
+  overlayLoading.value = true
+  try {
+    const all = await Promise.all(selectedStocks.value.map(st =>
+      stockApi.getKline(st.code, period.value, 'qfq')
+        .then(r => ({ code: st.code, name: st.name, bars: r.data as any[] }))
+    ))
+    // 时间戳交集对齐
+    const sets = all.map(a => new Set(a.bars.map(b => b.timestamp)))
+    let common = [...sets[0]]
+    for (const st of sets.slice(1)) common = common.filter(t => st.has(t))
+    common.sort((a, b) => a - b)
+    common = common.slice(-250)
+    if (common.length < 2) { overlaySeries.value = []; return }
+    overlaySeries.value = all.map((a, i) => {
+      const map = new Map(a.bars.map(b => [b.timestamp, b.close]))
+      const ts = common.filter(t => map.has(t))
+      const base = (map.get(ts[0]) as number) || 1
+      return {
+        code: a.code, name: a.name,
+        color: COMPARE_COLORS[i % COMPARE_COLORS.length],
+        ts, pct: ts.map(t => ((map.get(t) as number) / base - 1) * 100),
+      }
+    })
+    nextTick(renderOverlay)
+  } catch (e) {
+    console.error('overlay load failed:', e)
+    overlaySeries.value = []
+  } finally {
+    overlayLoading.value = false
+  }
+}
+
+function renderOverlay() {
+  const el = overlayCanvasRef.value
+  const series = overlaySeries.value
+  if (!el || series.length === 0) return
+  const w = el.clientWidth || 800
+  const h = el.clientHeight || 400
+  const padL = 48, padR = 12, padT = 12, padB = 22
+  const baseTs = series[0].ts
+  const n = baseTs.length
+  const allPct = series.flatMap(sr => sr.pct)
+  let min = Math.min(...allPct), max = Math.max(...allPct)
+  if (max - min < 1) { const mid = (max + min) / 2; min = mid - 1; max = mid + 1 }
+  const pad = (max - min) * 0.06
+  min -= pad; max += pad
+  const xOf = (i: number) => padL + (i / Math.max(1, n - 1)) * (w - padL - padR)
+  const yOf = (v: number) => padT + (1 - (v - min) / (max - min)) * (h - padT - padB)
+  const paths = series.map(sr => ({
+    name: sr.name, color: sr.color,
+    last: sr.pct[sr.pct.length - 1],
+    d: sr.pct.map((v, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(' '),
+  }))
+  const yTicks: { y: number; label: string }[] = []
+  for (let k = 0; k <= 4; k++) {
+    const v = min + (k / 4) * (max - min)
+    yTicks.push({ y: yOf(v), label: `${v.toFixed(1)}%` })
+  }
+  const fmt = (ts: number) => {
+    const d = new Date(ts)
+    return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  const xTicks: { x: number; label: string }[] = []
+  for (let k = 0; k <= 4; k++) {
+    const i = Math.round((k / 4) * (n - 1))
+    xTicks.push({ x: xOf(i), label: fmt(baseTs[i]) })
+  }
+  overlayRender.value = {
+    w, h, paths, yTicks, xTicks,
+    zeroY: min < 0 && max > 0 ? yOf(0) : null,
+    baseTs,
+  }
+}
+
+function onOverlayMove(e: MouseEvent) {
+  const r = overlayRender.value
+  const el = overlayCanvasRef.value
+  if (!el || r.baseTs.length === 0) return
+  const padL = 48, padR = 12
+  const n = r.baseTs.length
+  const x = e.clientX - el.getBoundingClientRect().left
+  const idx = Math.round(((x - padL) / Math.max(1, r.w - padL - padR)) * (n - 1))
+  hoverIdx.value = Math.max(0, Math.min(n - 1, idx))
+}
+
+const hoverInfo = computed(() => {
+  const i = hoverIdx.value
+  if (i === null || overlaySeries.value.length === 0) return null
+  const d = new Date(overlaySeries.value[0].ts[i])
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return {
+    date: dateStr,
+    x: 48 + (i / Math.max(1, overlaySeries.value[0].ts.length - 1)) * (overlayRender.value.w - 60),
+    items: overlaySeries.value.map(sr => ({ name: sr.name, color: sr.color, pct: sr.pct[i] })),
+  }
+})
+
+function switchMode(m: 'grid' | 'overlay') {
+  viewMode.value = m
+  if (m === 'overlay') loadOverlayData()
+  else if (selectedStocks.value.length >= 2) loadChartData()
+}
+
+const origOnResize = onResize
+function onResizeAll() {
+  origOnResize()
+  if (viewMode.value === 'overlay') renderOverlay()
+}
+
 onMounted(() => {
-  window.addEventListener('resize', onResize)
+  window.addEventListener('resize', onResizeAll)
   // Pre-select first 2 stocks from watchlist
   const stocks = watchlistStore.allStocks
   if (stocks.length >= 2) {
@@ -269,7 +400,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
+  window.removeEventListener('resize', onResizeAll)
   destroyCharts()
 })
 </script>
@@ -304,11 +435,16 @@ onUnmounted(() => {
         </button>
       </div>
 
+      <div class="mode-selector">
+        <button :class="['period-btn', { active: viewMode === 'grid' }]" @click="switchMode('grid')">并列</button>
+        <button :class="['period-btn', { active: viewMode === 'overlay' }]" @click="switchMode('overlay')">叠加</button>
+      </div>
+
       <button class="exit-btn" @click="emit('exit')">退出对比</button>
     </div>
 
     <!-- Chart area -->
-    <div class="compare-charts">
+    <div class="compare-charts" v-if="viewMode === 'grid'">
       <div v-if="loading" class="loading-overlay">加载中...</div>
       <div v-if="error" class="error-overlay">{{ error }}</div>
 
@@ -319,6 +455,41 @@ onUnmounted(() => {
       >
         <div class="chart-label">{{ stock.name }} ({{ stock.code }}) · {{ periodLabel }}</div>
         <div class="compare-chart-container"></div>
+      </div>
+    </div>
+
+    <!-- G1: 归一化叠加对比 -->
+    <div class="overlay-wrap" v-else>
+      <div v-if="overlayLoading" class="loading-overlay">加载中...</div>
+      <div class="overlay-legend">
+        <span v-for="sr in overlaySeries" :key="sr.code" class="legend-item">
+          <i class="legend-dot" :style="{ background: sr.color }"></i>
+          {{ sr.name }} <b :style="{ color: sr.color }">{{ sr.pct[sr.pct.length - 1] >= 0 ? '+' : '' }}{{ sr.pct[sr.pct.length - 1]?.toFixed(2) }}%</b>
+        </span>
+        <span class="legend-hint">（区间涨跌幅，以共同起点归一化）</span>
+      </div>
+      <div class="overlay-canvas" ref="overlayCanvasRef" @mousemove="onOverlayMove" @mouseleave="hoverIdx = null">
+        <svg :width="overlayRender.w" :height="overlayRender.h">
+          <line v-for="(t, i) in overlayRender.yTicks" :key="'y' + i"
+            :x1="48" :x2="overlayRender.w - 12" :y1="t.y" :y2="t.y" stroke="#2e313a" stroke-width="1" />
+          <text v-for="(t, i) in overlayRender.yTicks" :key="'yt' + i"
+            :x="42" :y="t.y + 3" text-anchor="end" fill="#6b7280" font-size="10">{{ t.label }}</text>
+          <text v-for="(t, i) in overlayRender.xTicks" :key="'x' + i"
+            :x="t.x" :y="overlayRender.h - 6" text-anchor="middle" fill="#6b7280" font-size="10">{{ t.label }}</text>
+          <line v-if="overlayRender.zeroY !== null"
+            :x1="48" :x2="overlayRender.w - 12" :y1="overlayRender.zeroY" :y2="overlayRender.zeroY"
+            stroke="#6b7280" stroke-dasharray="3,3" stroke-width="1" />
+          <path v-for="(p, i) in overlayRender.paths" :key="'p' + i" :d="p.d" :stroke="p.color" fill="none" stroke-width="1.6" />
+          <line v-if="hoverInfo" :x1="hoverInfo.x" :x2="hoverInfo.x" :y1="12" :y2="overlayRender.h - 22"
+            stroke="#4b5563" stroke-dasharray="2,2" stroke-width="1" />
+        </svg>
+        <div v-if="hoverInfo" class="hover-tooltip" :style="{ left: Math.min(hoverInfo.x + 10, overlayRender.w - 150) + 'px' }">
+          <div class="tt-date">{{ hoverInfo.date }}</div>
+          <div v-for="it in hoverInfo.items" :key="it.name" class="tt-row">
+            <i class="legend-dot" :style="{ background: it.color }"></i>{{ it.name }}
+            <b>{{ it.pct >= 0 ? '+' : '' }}{{ it.pct.toFixed(2) }}%</b>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -499,6 +670,23 @@ onUnmounted(() => {
   border-radius: 4px;
   pointer-events: none;
 }
+
+.mode-selector { display: flex; gap: 2px; flex-shrink: 0; border: 1px solid #2e313a; border-radius: 6px; padding: 2px; }
+.overlay-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.overlay-legend { display: flex; align-items: center; gap: 14px; padding: 8px 16px 4px; flex-wrap: wrap; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #e4e4e7; }
+.legend-item b { font-family: monospace; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend-hint { font-size: 11px; color: #6b7280; }
+.overlay-canvas { flex: 1; position: relative; min-height: 300px; }
+.overlay-canvas svg { display: block; width: 100%; height: 100%; }
+.hover-tooltip {
+  position: absolute; top: 12px; background: #1c1f27; border: 1px solid #2e313a;
+  border-radius: 6px; padding: 6px 10px; font-size: 11px; pointer-events: none; z-index: 10;
+}
+.tt-date { color: #9ca3af; margin-bottom: 4px; }
+.tt-row { display: flex; align-items: center; gap: 6px; color: #e4e4e7; padding: 1px 0; }
+.tt-row b { margin-left: auto; font-family: monospace; }
 
 .compare-chart-container {
   flex: 1;
