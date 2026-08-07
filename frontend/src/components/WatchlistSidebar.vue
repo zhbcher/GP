@@ -62,9 +62,14 @@ const filterError = ref('')
 
 const conditionTypeOptions = [
   { label: '近N日涨幅', value: 'return_pct' },
+  { label: '涨幅区间', value: 'return_range' },
   { label: '站上均线', value: 'above_ma' },
   { label: 'MACD金叉', value: 'macd_golden_cross' },
   { label: '成交量放大', value: 'volume_surge' },
+  { label: 'RSI超卖', value: 'rsi_oversold' },
+  { label: 'RSI超买', value: 'rsi_overbought' },
+  { label: '触及布林下轨', value: 'boll_touch_lower' },
+  { label: '触及布林上轨', value: 'boll_touch_upper' },
 ]
 
 const operatorOptions = ['>', '<', '>=', '<=', '==']
@@ -77,6 +82,9 @@ function addCondition() {
     value: 5,
     ma_period: 20,
     multiplier: 2,
+    period: 14,
+    min_value: -5,
+    max_value: 5,
   })
 }
 
@@ -100,6 +108,16 @@ async function runScreen() {
       } else if (c.type === 'volume_surge') {
         obj.days = c.days
         obj.multiplier = c.multiplier
+      } else if (c.type === 'rsi_oversold' || c.type === 'rsi_overbought') {
+        obj.period = c.period || 14
+        obj.value = c.value
+      } else if (c.type === 'boll_touch_lower' || c.type === 'boll_touch_upper') {
+        obj.period = c.period || 20
+        obj.multiplier = c.multiplier || 2
+      } else if (c.type === 'return_range') {
+        obj.days = c.days
+        obj.min_value = c.min_value
+        obj.max_value = c.max_value
       }
       return obj
     })
@@ -261,6 +279,31 @@ function changeColor(pct: number): string {
           <span class="cond-label">日均量</span>
           <input v-model.number="cond.multiplier" type="number" step="0.1" class="cond-input-sm" />
           <span class="cond-label">倍</span>
+        </template>
+
+        <template v-else-if="cond.type === 'rsi_oversold' || cond.type === 'rsi_overbought'">
+          <span class="cond-label">RSI(</span>
+          <input v-model.number="cond.period" type="number" min="2" class="cond-input-sm" />
+          <span class="cond-label">) {{ cond.type === 'rsi_oversold' ? '≤' : '≥' }}</span>
+          <input v-model.number="cond.value" type="number" min="0" max="100" class="cond-input-sm" />
+        </template>
+
+        <template v-else-if="cond.type === 'boll_touch_lower' || cond.type === 'boll_touch_upper'">
+          <span class="cond-label">BOLL(</span>
+          <input v-model.number="cond.period" type="number" min="2" class="cond-input-sm" />
+          <span class="cond-label">,</span>
+          <input v-model.number="cond.multiplier" type="number" step="0.1" class="cond-input-sm" />
+          <span class="cond-label">σ)</span>
+        </template>
+
+        <template v-else-if="cond.type === 'return_range'">
+          <span class="cond-label">近</span>
+          <input v-model.number="cond.days" type="number" min="1" class="cond-input-sm" />
+          <span class="cond-label">日涨幅 ∈ [</span>
+          <input v-model.number="cond.min_value" type="number" step="0.1" class="cond-input-sm" />
+          <span class="cond-label">,</span>
+          <input v-model.number="cond.max_value" type="number" step="0.1" class="cond-input-sm" />
+          <span class="cond-label">]%</span>
         </template>
 
         <button class="remove-cond-btn" @click="removeCondition(idx)">×</button>

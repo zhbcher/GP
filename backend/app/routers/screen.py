@@ -19,11 +19,15 @@ router = APIRouter(prefix="/api/watchlist", tags=["screen"])
 
 class Condition(BaseModel):
     type: str  # return_pct | above_ma | macd_golden_cross | volume_surge
+               # | rsi_oversold | rsi_overbought | boll_touch_lower | boll_touch_upper | return_range
     days: int | None = None
     operator: str | None = None  # > < >= <= ==
     value: float | None = None
     ma_period: int | None = None
-    multiplier: float | None = None  # for volume_surge
+    multiplier: float | None = None  # for volume_surge / boll
+    min_value: float | None = None   # for return_range
+    max_value: float | None = None   # for return_range
+    period: int | None = None        # for rsi/boll
 
 
 class ScreenRequest(BaseModel):
@@ -120,6 +124,60 @@ def _check_volume_surge(volumes: list[int], cond: Condition) -> bool:
     return volumes[-1] > avg_vol * mult
 
 
+def _compute_rsi(closes: list[float], period: int = 14) -> float | None:
+    """Wilder RSI（最后值）。"""
+    if len(closes) < period + 1:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        chg = closes[i] - closes[i - 1]
+        gains.append(max(chg, 0.0))
+        losses.append(max(-chg, 0.0))
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100 - 100 / (1 + rs)
+
+
+def _check_rsi(closes: list[float], cond: Condition, oversold: bool) -> bool:
+    period = cond.period or 14
+    rsi = _compute_rsi(closes, period)
+    if rsi is None:
+        return False
+    threshold = cond.value if cond.value is not None else (30 if oversold else 70)
+    return rsi <= threshold if oversold else rsi >= threshold
+
+
+def _check_boll(closes: list[float], cond: Condition, lower: bool) -> bool:
+    period = cond.period or 20
+    mult = cond.multiplier or 2.0
+    if len(closes) < period:
+        return False
+    window = closes[-period:]
+    mid = sum(window) / period
+    std = math.sqrt(sum((c - mid) ** 2 for c in window) / period)
+    band = mid - mult * std if lower else mid + mult * std
+    return closes[-1] <= band if lower else closes[-1] >= band
+
+
+def _check_return_range(closes: list[float], cond: Condition) -> bool:
+    days = cond.days or 5
+    if len(closes) < days + 1:
+        return False
+    ref = closes[-1 - days]
+    if ref == 0:
+        return False
+    pct = (closes[-1] - ref) / ref * 100
+    lo = cond.min_value if cond.min_value is not None else float("-inf")
+    hi = cond.max_value if cond.max_value is not None else float("inf")
+    return lo <= pct <= hi
+
+
 # ---- Main route ----
 
 @router.post("/screen")
@@ -166,6 +224,26 @@ async def screen_stocks(req: ScreenRequest, db: AsyncSession = Depends(get_db)):
                     break
             elif cond.type == "volume_surge":
                 if not _check_volume_surge(volumes, cond):
+                    all_pass = False
+                    break
+            elif cond.type == "rsi_oversold":
+                if not _check_rsi(closes, cond, oversold=True):
+                    all_pass = False
+                    break
+            elif cond.type == "rsi_overbought":
+                if not _check_rsi(closes, cond, oversold=False):
+                    all_pass = False
+                    break
+            elif cond.type == "boll_touch_lower":
+                if not _check_boll(closes, cond, lower=True):
+                    all_pass = False
+                    break
+            elif cond.type == "boll_touch_upper":
+                if not _check_boll(closes, cond, lower=False):
+                    all_pass = False
+                    break
+            elif cond.type == "return_range":
+                if not _check_return_range(closes, cond):
                     all_pass = False
                     break
             else:
