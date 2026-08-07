@@ -211,6 +211,19 @@ def start_scheduler():
     #     max_instances=1,
     # )
 
+    # Daily database backup: 21:00 every day, keep last 7
+    from scripts.backup_db import backup_job
+    scheduler.add_job(
+        backup_job,
+        trigger=CronTrigger(hour=21, minute=0),
+        id="daily_db_backup",
+        name="Daily database backup",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
+
     # Info cache warmup: 09:00 weekdays (pre-market)
     scheduler.add_job(
         info_cache_warmup,
@@ -224,7 +237,7 @@ def start_scheduler():
     )
 
     scheduler.start()
-    logger.info("Scheduler started: kline@15:30, integrity@16:00, freshness@30min, news@8/12/20, warmup@9:00")
+    logger.info("Scheduler started: kline@15:30, integrity@16:00, freshness@30min, backup@21:00, warmup@9:00")
 
 
 async def _periodic_freshness_check():
