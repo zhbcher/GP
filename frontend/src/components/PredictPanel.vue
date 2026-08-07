@@ -1,7 +1,28 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { usePredictStore } from '@/stores/predict'
 import { useStockStore } from '@/stores/stock'
+import { predictApi, type ModelAccuracy } from '@/api'
+
+// D3: 模型准确率（回测统计，与当前股票无关，面板打开时加载）
+const accuracyModels = ref<ModelAccuracy[]>([])
+const accuracyLoading = ref(false)
+const MODEL_LABELS: Record<string, string> = {
+  technical: '技术指标', statistical: '统计模型', monte_carlo: '蒙特卡洛',
+  ml: 'XGBoost', patterns: '形态识别', deep_learning: 'LSTM', ensemble: '集成',
+}
+async function loadAccuracy() {
+  accuracyLoading.value = true
+  try {
+    const resp = await predictApi.accuracy()
+    accuracyModels.value = resp.models || []
+  } catch (e) {
+    accuracyModels.value = []
+  } finally {
+    accuracyLoading.value = false
+  }
+}
+onMounted(loadAccuracy)
 
 const predictStore = usePredictStore()
 const stockStore = useStockStore()
@@ -109,6 +130,20 @@ const trendLabel = computed(() => {
         </div>
       </div>
 
+      <!-- D3: 模型准确率（回测） -->
+      <div class="accuracy-section">
+        <h4>模型准确率（回测）</h4>
+        <div v-if="accuracyLoading" class="accuracy-loading">加载中…</div>
+        <div v-else-if="accuracyModels.length === 0" class="accuracy-empty">样本积累中</div>
+        <template v-else>
+          <div v-for="m in accuracyModels" :key="m.model" class="accuracy-item">
+            <span class="accuracy-label">{{ MODEL_LABELS[m.model] || m.model }}</span>
+            <span class="accuracy-value" :class="{ good: m.accuracy >= 55, bad: m.accuracy < 45 }">{{ m.accuracy.toFixed(1) }}%</span>
+            <span class="accuracy-samples">{{ m.samples >= 30 ? m.samples + ' 次' : '样本积累中' }}</span>
+          </div>
+        </template>
+      </div>
+
       <!-- 形态识别 -->
       <div v-if="predictStore.result?.models?.patterns?.patterns?.length" class="patterns-section">
         <h4>形态识别</h4>
@@ -153,7 +188,15 @@ const trendLabel = computed(() => {
 .ensemble-trend strong { font-size: 16px; }
 .confidence { margin-left: 8px; background: #3b82f6; color: white; padding: 1px 6px; border-radius: 8px; font-size: 11px; }
 .ensemble-price { font-size: 12px; color: #a0a0b0; }
-.model-votes, .patterns-section, .levels-section { margin-bottom: 12px; }
+.model-votes, .patterns-section, .levels-section, .accuracy-section { margin-bottom: 12px; }
+.accuracy-section h4 { margin: 0 0 8px; font-size: 13px; color: #a0a0b0; }
+.accuracy-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid #2a2a3e; }
+.accuracy-label { color: #e0e0e0; flex: 1; }
+.accuracy-value { font-weight: 600; color: #a0a0b0; }
+.accuracy-value.good { color: #22c55e; }
+.accuracy-value.bad { color: #ef4444; }
+.accuracy-samples { font-size: 11px; color: #707080; }
+.accuracy-loading, .accuracy-empty { color: #707080; padding: 6px 0; }
 .model-votes h4, .patterns-section h4, .levels-section h4 { margin: 0 0 8px; font-size: 13px; color: #a0a0b0; }
 .vote-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a3e; }
 .vote-label { color: #e0e0e0; }

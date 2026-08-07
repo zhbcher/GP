@@ -88,7 +88,20 @@ export const stockApi = {
     return api.get(`/stock/${code}/timeline`).then(r => r.data)
   },
   predict(code: string, days = 5) {
-    return api.get(`/api/stock/${code}/predict`, { params: { days } }).then(r => r.data)
+    return api.get(`/stock/${code}/predict`, { params: { days } }).then(r => r.data)
+  },
+}
+
+export interface ModelAccuracy {
+  model: string
+  samples: number
+  correct: number
+  accuracy: number
+}
+
+export const predictApi = {
+  accuracy(): Promise<{ models: ModelAccuracy[]; count: number }> {
+    return api.get('/predict/accuracy').then(r => r.data)
   },
 }
 
