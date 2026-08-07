@@ -24,6 +24,12 @@
       "total": 2540,
       "correct": 1434,
       "accuracy": 0.5646
+    },
+    "deep_learning": {
+      "total": 6927,
+      "correct": 3727,
+      "accuracy": 0.538,
+      "source": "lstm_val_set_eval_2026-08-07"
     }
   },
   "10": {
@@ -51,6 +57,12 @@
       "total": 2655,
       "correct": 1448,
       "accuracy": 0.5454
+    },
+    "deep_learning": {
+      "total": 6927,
+      "correct": 3727,
+      "accuracy": 0.538,
+      "source": "lstm_val_set_eval_2026-08-07"
     }
   }
 }

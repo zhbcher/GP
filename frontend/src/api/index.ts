@@ -87,8 +87,8 @@ export const stockApi = {
   getTimeline(code: string): Promise<TimelineResponse> {
     return api.get(`/stock/${code}/timeline`).then(r => r.data)
   },
-  predict(code: string, days = 5) {
-    return api.get(`/stock/${code}/predict`, { params: { days } }).then(r => r.data)
+  predict(code: string, days = 5, llm = false) {
+    return api.get(`/stock/${code}/predict`, { params: { days, ...(llm ? { llm: true } : {}) } }).then(r => r.data)
   },
 }
 
@@ -99,9 +99,14 @@ export interface ModelAccuracy {
   accuracy: number
 }
 
+export interface BacktestStat { total: number; correct: number; accuracy: number; source?: string }
+
 export const predictApi = {
   accuracy(): Promise<{ models: ModelAccuracy[]; count: number }> {
     return api.get('/predict/accuracy').then(r => r.data)
+  },
+  backtest(): Promise<{ horizons: Record<string, Record<string, BacktestStat>>; report: string | null }> {
+    return api.get('/predict/backtest').then(r => r.data)
   },
 }
 

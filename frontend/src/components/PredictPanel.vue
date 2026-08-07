@@ -2,14 +2,14 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { usePredictStore } from '@/stores/predict'
 import { useStockStore } from '@/stores/stock'
-import { predictApi, type ModelAccuracy } from '@/api'
+import { predictApi, type ModelAccuracy, type BacktestStat } from '@/api'
 
 // D3: 模型准确率（回测统计，与当前股票无关，面板打开时加载）
 const accuracyModels = ref<ModelAccuracy[]>([])
 const accuracyLoading = ref(false)
 const MODEL_LABELS: Record<string, string> = {
   technical: '技术指标', statistical: '统计模型', monte_carlo: '蒙特卡洛',
-  ml: 'XGBoost', patterns: '形态识别', deep_learning: 'LSTM', ensemble: '集成',
+  ml: 'XGBoost', xgboost: 'XGBoost', patterns: '形态识别', deep_learning: 'LSTM', ensemble: '集成',
 }
 async function loadAccuracy() {
   accuracyLoading.value = true
@@ -22,15 +22,32 @@ async function loadAccuracy() {
     accuracyLoading.value = false
   }
 }
-onMounted(loadAccuracy)
+const backtest = ref<Record<string, Record<string, BacktestStat>>>({})
+async function loadBacktest() {
+  try {
+    const resp = await predictApi.backtest()
+    backtest.value = resp.horizons || {}
+  } catch (e) {
+    backtest.value = {}
+  }
+}
+onMounted(() => { loadAccuracy(); loadBacktest() })
 
 const predictStore = usePredictStore()
 const stockStore = useStockStore()
 
 const days = ref(5)
+const llmLoading = ref(false)
 
 watch(() => stockStore.currentCode, () => {
   if (predictStore.visible && stockStore.currentCode) {
+    predictStore.load(stockStore.currentCode, days.value)
+  }
+})
+
+// 打开面板时若当前股票还没预测结果，自动加载
+watch(() => predictStore.visible, (v) => {
+  if (v && stockStore.currentCode && !predictStore.result) {
     predictStore.load(stockStore.currentCode, days.value)
   }
 })
@@ -41,46 +58,59 @@ function refresh() {
   }
 }
 
-const ensembleTrend = computed(() => {
+async function generateLlm() {
+  if (!stockStore.currentCode) return
+  llmLoading.value = true
+  try {
+    await predictStore.load(stockStore.currentCode, days.value, true)
+  } finally {
+    llmLoading.value = false
+  }
+}
+
+const ensemble = computed(() => {
   const e = predictStore.result?.ensemble
   if (!e || 'error' in e) return null
-  return e as { trend: string; confidence: number; votes: Record<string, number>; price_target: Record<string, number> }
+  return e
 })
 
-const modelVotes = computed(() => {
-  const models = predictStore.result?.models
-  if (!models) return []
-  const items: { name: string; label: string; trend: string; confidence: number }[] = []
+const voteRows = computed(() => {
+  const en = ensemble.value
+  if (!en || !en.votes) return []
   const labels: Record<string, string> = {
     technical: '技术指标', statistical: '统计模型', monte_carlo: '蒙特卡洛',
-    ml: 'XGBoost', patterns: '形态识别', deep_learning: 'LSTM'
+    ml: 'XGBoost', patterns: '形态识别', deep_learning: 'LSTM',
   }
-  for (const [key, value] of Object.entries(models)) {
-    if (typeof value === 'object' && value !== null && 'trend' in (value as any)) {
-      const v = value as any
-      items.push({
-        name: key,
-        label: labels[key] || key,
-        trend: v.trend === 'up' ? '↑ 看涨' : v.trend === 'down' ? '↓ 看跌' : '→ 震荡',
-        confidence: v.confidence || 0
-      })
-    }
-  }
-  return items
+  return Object.entries(en.votes).map(([name, v]) => ({
+    name,
+    label: labels[name] || name,
+    direction: v.direction,
+    confidence: v.confidence,
+    weight: v.weight,
+    trendText: v.direction > 0 ? '↑ 看涨' : v.direction < 0 ? '↓ 看跌' : '→ 震荡',
+    trendClass: v.direction > 0 ? 'up' : v.direction < 0 ? 'down' : 'sideways',
+  }))
 })
 
+const modelVotes = computed(() => voteRows.value)
+
 const trendEmoji = computed(() => {
-  const t = ensembleTrend.value?.trend
+  const t = ensemble.value?.final_trend
   if (t === 'up') return '📈'
   if (t === 'down') return '📉'
   return '📊'
 })
 
 const trendLabel = computed(() => {
-  const t = ensembleTrend.value?.trend
+  const t = ensemble.value?.final_trend
   if (t === 'up') return '看涨'
   if (t === 'down') return '看跌'
   return '震荡'
+})
+
+const trendClass = computed(() => {
+  const t = ensemble.value?.final_trend
+  return t === 'up' ? 'up' : t === 'down' ? 'down' : 'sideways'
 })
 </script>
 
@@ -102,45 +132,44 @@ const trendLabel = computed(() => {
 
     <div v-if="predictStore.loading" class="loading">分析中，请稍候...</div>
     <div v-else-if="predictStore.error" class="error">{{ predictStore.error }}</div>
-    <div v-else-if="ensembleTrend" class="predict-content">
+    <div v-else-if="ensemble" class="predict-content">
       <!-- 综合趋势 -->
       <div class="ensemble-card">
         <div class="ensemble-icon">{{ trendEmoji }}</div>
         <div class="ensemble-info">
           <div class="ensemble-trend">
-            综合趋势: <strong :class="'text-' + ensembleTrend.trend">{{ trendLabel }}</strong>
-            <span class="confidence">{{ (ensembleTrend.confidence * 100).toFixed(0) }}%</span>
+            综合趋势: <strong :class="'text-' + trendClass">{{ trendLabel }}</strong>
+            <span class="confidence">{{ (ensemble.weighted_confidence * 100).toFixed(0) }}%</span>
           </div>
-          <div v-if="ensembleTrend.price_target" class="ensemble-price">
-            目标价: {{ ensembleTrend.price_target.median }} 
-            ({{ ensembleTrend.price_target.range_low }} ~ {{ ensembleTrend.price_target.range_high }})
+          <div v-if="ensemble.target_price" class="ensemble-price">
+            目标价: {{ ensemble.target_price }}
+            <span v-if="ensemble.score !== undefined" class="ensemble-score">（得分 {{ ensemble.score > 0 ? '+' : '' }}{{ ensemble.score.toFixed(2) }}）</span>
           </div>
         </div>
       </div>
 
-      <!-- 各模型投票 -->
+      <!-- 各模型投票（加权） -->
       <div class="model-votes">
-        <h4>各模型投票</h4>
-        <div v-for="item in modelVotes" :key="item.name" class="vote-item">
+        <h4>模型投票（权重来自回测准确率）</h4>
+        <div v-for="item in voteRows" :key="item.name" class="vote-item">
           <span class="vote-label">{{ item.label }}</span>
-          <span :class="['vote-trend', 'text-' + (item.trend.includes('看涨') ? 'up' : item.trend.includes('看跌') ? 'down' : 'sideways')]">
-            {{ item.trend }}
-          </span>
+          <span :class="['vote-trend', 'text-' + item.trendClass]">{{ item.trendText }}</span>
           <span class="vote-confidence">{{ (item.confidence * 100).toFixed(0) }}%</span>
+          <span class="vote-weight">权重 {{ item.weight.toFixed(2) }}</span>
         </div>
       </div>
 
-      <!-- D3: 模型准确率（回测） -->
+      <!-- 回测准确率（walk-forward 历史验证） -->
       <div class="accuracy-section">
-        <h4>模型准确率（回测）</h4>
-        <div v-if="accuracyLoading" class="accuracy-loading">加载中…</div>
-        <div v-else-if="accuracyModels.length === 0" class="accuracy-empty">样本积累中</div>
+        <h4>模型准确率（历史回测 / 近{{ days }}日方向）</h4>
+        <div v-if="Object.keys(backtest).length === 0" class="accuracy-empty">暂无回测数据</div>
         <template v-else>
-          <div v-for="m in accuracyModels" :key="m.model" class="accuracy-item">
-            <span class="accuracy-label">{{ MODEL_LABELS[m.model] || m.model }}</span>
-            <span class="accuracy-value" :class="{ good: m.accuracy >= 55, bad: m.accuracy < 45 }">{{ m.accuracy.toFixed(1) }}%</span>
-            <span class="accuracy-samples">{{ m.samples >= 30 ? m.samples + ' 次' : '样本积累中' }}</span>
+          <div v-for="(stat, model) in (backtest[String(days)] || {})" :key="model" class="accuracy-item">
+            <span class="accuracy-label">{{ MODEL_LABELS[model] || model }}</span>
+            <span class="accuracy-value" :class="{ good: stat.accuracy >= 0.53, bad: stat.accuracy < 0.50 }">{{ (stat.accuracy * 100).toFixed(1) }}%</span>
+            <span class="accuracy-samples">{{ stat.total }} 样本</span>
           </div>
+          <div class="accuracy-note">权重按回测准确率分配；&lt;50% 的模型已被压权</div>
         </template>
       </div>
 
@@ -165,6 +194,23 @@ const trendLabel = computed(() => {
           <span class="level-value">{{ predictStore.result.models.patterns.support?.[0]?.price }}</span>
         </div>
       </div>
+
+      <!-- LLM 分析报告 -->
+      <div class="llm-section">
+        <h4>AI 分析报告</h4>
+        <div v-if="llmLoading" class="loading">AI 分析生成中（约 10-30 秒）...</div>
+        <template v-else-if="predictStore.result?.llm">
+          <div v-if="predictStore.result.llm.status === 'ok'" class="llm-report">
+            <p class="llm-summary">{{ predictStore.result.llm.summary }}</p>
+            <p class="llm-suggestion">💡 {{ predictStore.result.llm.suggestion }}</p>
+            <p class="llm-risk">⚠️ 风险: {{ predictStore.result.llm.risk }}</p>
+          </div>
+          <div v-else class="llm-error">
+            {{ predictStore.result.llm.status === 'not_configured' ? '未配置 LLM API' : '生成失败: ' + (predictStore.result.llm.error || predictStore.result.llm.status) }}
+          </div>
+        </template>
+        <button v-else class="llm-btn" @click="generateLlm">✨ 生成 AI 分析报告</button>
+      </div>
     </div>
     <div v-else class="empty">
       点击"预测"按钮或切换股票开始分析
@@ -188,7 +234,16 @@ const trendLabel = computed(() => {
 .ensemble-trend strong { font-size: 16px; }
 .confidence { margin-left: 8px; background: #3b82f6; color: white; padding: 1px 6px; border-radius: 8px; font-size: 11px; }
 .ensemble-price { font-size: 12px; color: #a0a0b0; }
-.model-votes, .patterns-section, .levels-section, .accuracy-section { margin-bottom: 12px; }
+.model-votes, .patterns-section, .levels-section, .accuracy-section, .llm-section { margin-bottom: 12px; }
+.ensemble-score { color: #707080; font-size: 11px; }
+.llm-section h4 { margin: 0 0 8px; font-size: 13px; color: #a0a0b0; }
+.llm-btn { background: #6366f1; color: white; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 12px; width: 100%; }
+.llm-btn:hover { background: #818cf8; }
+.llm-report { background: #1e1e32; border-radius: 8px; padding: 10px; line-height: 1.6; }
+.llm-summary { margin: 0 0 8px; color: #e0e0e0; }
+.llm-suggestion { margin: 0 0 6px; color: #93c5fd; }
+.llm-risk { margin: 0; color: #fbbf24; font-size: 12px; }
+.llm-error { color: #707080; font-size: 12px; }
 .accuracy-section h4 { margin: 0 0 8px; font-size: 13px; color: #a0a0b0; }
 .accuracy-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid #2a2a3e; }
 .accuracy-label { color: #e0e0e0; flex: 1; }
@@ -197,10 +252,12 @@ const trendLabel = computed(() => {
 .accuracy-value.bad { color: #ef4444; }
 .accuracy-samples { font-size: 11px; color: #707080; }
 .accuracy-loading, .accuracy-empty { color: #707080; padding: 6px 0; }
+.accuracy-note { color: #606070; font-size: 11px; margin-top: 4px; }
 .model-votes h4, .patterns-section h4, .levels-section h4 { margin: 0 0 8px; font-size: 13px; color: #a0a0b0; }
 .vote-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a3e; }
-.vote-label { color: #e0e0e0; }
-.vote-confidence { color: #a0a0b0; }
+.vote-label { color: #e0e0e0; flex: 1; }
+.vote-confidence { color: #a0a0b0; margin-right: 8px; }
+.vote-weight { color: #707080; font-size: 11px; min-width: 56px; text-align: right; }
 .text-up { color: #ef4444; }
 .text-down { color: #22c55e; }
 .text-sideways { color: #eab308; }

@@ -19,3 +19,20 @@ async def predict_evaluate():
     """手动触发到期预测评估（用于测试/补跑）。"""
     from app.services.prediction_eval import evaluate_due_predictions
     return await evaluate_due_predictions()
+
+
+@router.get("/backtest")
+async def predict_backtest():
+    """walk-forward 历史回测准确率（docs/backtest-result.json）。"""
+    import json, os
+    path = os.path.expanduser("~/GP/docs/backtest-result.json")
+    if not os.path.exists(path):
+        return {"horizons": {}, "report": None}
+    with open(path) as f:
+        data = json.load(f)
+    report_path = os.path.expanduser("~/GP/docs/backtest-report.md")
+    report = None
+    if os.path.exists(report_path):
+        with open(report_path) as f:
+            report = f.read()
+    return {"horizons": data, "report": report}

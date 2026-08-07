@@ -24,6 +24,18 @@ import type { PeriodType, AdjustType } from './types'
 const sidebarOpen = ref(true)
 const fullscreen = ref(false)  // FE-006
 const rightPanel = ref<'annotation' | 'info' | 'journal' | 'predict'>('annotation')  // 右侧面板切换
+
+// 打开预测 tab 时联动 predictStore（触发自动加载）
+import { usePredictStore as usePredictStoreForTab } from '@/stores/predict'
+import { useStockStore as useStockStoreForTab } from '@/stores/stock'
+function openPredict() {
+  const ps = usePredictStoreForTab()
+  const ss = useStockStoreForTab()
+  ps.visible = true
+  if (ss.currentCode && !ps.result) {
+    ps.load(ss.currentCode, 5)
+  }
+}
 const showMarket = ref(false)  // 市场情绪看板全屏
 const showNews = ref(false)  // 行业资讯全屏
 const showChips = ref(false)  // MV-004: 筹码分布
@@ -182,7 +194,7 @@ function onAdjustChange(a: AdjustType) {
           </button>
           <button
             :class="['rp-tab', { active: rightPanel === 'predict' }]"
-            @click="rightPanel = 'predict'"
+            @click="rightPanel = 'predict'; openPredict()" 
           >
             预测
           </button>

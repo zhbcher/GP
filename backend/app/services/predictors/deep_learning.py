@@ -215,6 +215,15 @@ class DeepLearningPredictor:
                 self.model = LSTMPredictor().to(device)
                 self.model.load_state_dict(torch.load(model_path, map_location=device))
                 self.model.eval()
+                # 读取训练时记录的方向准确率（供融合器门禁用）
+                import json as _json
+                _meta_path = os.path.join(MODEL_DIR, "lstm_meta.json")
+                if os.path.exists(_meta_path):
+                    try:
+                        with open(_meta_path) as _f:
+                            self.direction_accuracy = float(_json.load(_f).get("direction_accuracy", 0.5))
+                    except Exception:
+                        self.direction_accuracy = 0.5
             else:
                 await self.train()
 
@@ -244,13 +253,14 @@ class DeepLearningPredictor:
         with torch.no_grad():
             pred_normalized = self.model(X).cpu().numpy()[0]
 
-        pred_prices = [p * std + mean for p in pred_normalized]
+        # numpy.float32 不能被 FastAPI 序列化，统一转成 Python float
+        pred_prices = [float(p) * std + mean for p in pred_normalized]
 
         mae = abs(current_price) * 0.03
         forecast = []
         confidence_band = []
         for i, p in enumerate(pred_prices[:days]):
-            p = round(max(p, 0), 2)
+            p = round(float(max(p, 0)), 2)
             forecast.append({"date": f"day_{i+1}", "price": p})
             confidence_band.append({"date": f"day_{i+1}", "low": round(p - 2 * mae, 2), "high": round(p + 2 * mae, 2)})
 
