@@ -7,6 +7,7 @@ import {
   createChart, getChart, resizeChart, destroyChart,
   registerAnnotationOverlay, registerLimitMarkOverlay, registerMinuteAvgOverlay,
   createAnnotationOverlay, clearAllOverlays, markLimitCandles, createMinuteAvgOverlay,
+  registerSignalMarkOverlay,
 } from '@/overlays/annotationOverlay'
 import { stockApi } from '@/api'
 import type { MinutePoint } from '@/types'
@@ -34,6 +35,7 @@ onMounted(async () => {
     registerAnnotationOverlay()
     registerLimitMarkOverlay()
     registerMinuteAvgOverlay()
+    registerSignalMarkOverlay()
     setupDataLoader()
     setupChartActions()
   }
@@ -132,6 +134,10 @@ function setupDataLoader() {
             restoreDrawings()
             // FE-007: mark limit-up/down candles
             markLimitCandles(data)
+            // 超跌反弹信号（不影响 K 线）
+            stockApi.getOversoldSignals(currentCode).then((sigData: any) => {
+              drawOversoldSignals(data, sigData)
+            }).catch(() => {})
           }
         } catch (e) {
           console.error('Failed to load data:', e)
@@ -340,6 +346,31 @@ function syncAnnotationOverlays() {
       })
     }
   }
+}
+
+// 超跌反弹信号 overlay
+function drawOversoldSignals(klineData: any[], sigData: any) {
+  try {
+    const chart = getChart()
+    if (!chart || !sigData) return
+    chart.removeOverlay({ name: 'signalDot' })
+    chart.removeOverlay({ name: 'signalTriangle' })
+    for (const k of klineData) {
+      const d = new Date(k.timestamp)
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      if (sigData.date && ds === sigData.date) {
+        const base = sigData.base || {}
+        const consol = sigData.consolidation || {}
+        if (base['11'] && base['11'].found) {
+          chart.createOverlay({ name: 'signalDot', points: [{ timestamp: k.timestamp, value: k.low }], extendData: { kind: 'base' }, visible: true })
+        }
+        if (consol['11'] && consol['11'].found) {
+          chart.createOverlay({ name: 'signalTriangle', points: [{ timestamp: k.timestamp, value: k.low }], extendData: { kind: 'consolidation' }, visible: true })
+        }
+        return
+      }
+    }
+  } catch (e) { /* ignore */ }
 }
 
 function restoreDrawings() {

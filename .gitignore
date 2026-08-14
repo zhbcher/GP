@@ -27,3 +27,11 @@ llm.config.local.json
 .DS_Store
 *.swp
 data/predict_llm_cache.json
+
+# 备份文件
+*.bak
+*.bak.*
+# 数据库备份/损坏文件（*.db.bak.xxx 等不被 *.db 匹配）
+*.db.*
+*.db.bak.*
+*.db.broken.*

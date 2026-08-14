@@ -1,0 +1,217 @@
+{
+  "data": {
+    "stocks": 3000,
+    "horizon": 20,
+    "models": 26
+  },
+  "ensemble": [
+    {
+      "threshold": 1,
+      "signals": 68798,
+      "correct": 39578,
+      "win_rate": 57.5,
+      "avg_return": 5.4,
+      "weekly_est": 69
+    },
+    {
+      "threshold": 2,
+      "signals": 48860,
+      "correct": 29025,
+      "win_rate": 59.4,
+      "avg_return": 6.21,
+      "weekly_est": 49
+    },
+    {
+      "threshold": 3,
+      "signals": 36900,
+      "correct": 22707,
+      "win_rate": 61.5,
+      "avg_return": 6.93,
+      "weekly_est": 37
+    },
+    {
+      "threshold": 4,
+      "signals": 33432,
+      "correct": 21025,
+      "win_rate": 62.9,
+      "avg_return": 7.45,
+      "weekly_est": 33
+    },
+    {
+      "threshold": 5,
+      "signals": 20379,
+      "correct": 13286,
+      "win_rate": 65.2,
+      "avg_return": 8.79,
+      "weekly_est": 20
+    },
+    {
+      "threshold": 6,
+      "signals": 19044,
+      "correct": 12646,
+      "win_rate": 66.4,
+      "avg_return": 9.26,
+      "weekly_est": 19
+    },
+    {
+      "threshold": 7,
+      "signals": 15947,
+      "correct": 10850,
+      "win_rate": 68.0,
+      "avg_return": 10.23,
+      "weekly_est": 16
+    },
+    {
+      "threshold": 8,
+      "signals": 14640,
+      "correct": 10159,
+      "win_rate": 69.4,
+      "avg_return": 10.89,
+      "weekly_est": 15
+    },
+    {
+      "threshold": 9,
+      "signals": 5833,
+      "correct": 4168,
+      "win_rate": 71.5,
+      "avg_return": 13.67,
+      "weekly_est": 6
+    },
+    {
+      "threshold": 10,
+      "signals": 5564,
+      "correct": 4033,
+      "win_rate": 72.5,
+      "avg_return": 14.22,
+      "weekly_est": 6
+    },
+    {
+      "threshold": 11,
+      "signals": 5001,
+      "correct": 3737,
+      "win_rate": 74.7,
+      "avg_return": 15.38,
+      "weekly_est": 5
+    },
+    {
+      "threshold": 12,
+      "signals": 4109,
+      "correct": 3076,
+      "win_rate": 74.9,
+      "avg_return": 16.44,
+      "weekly_est": 4
+    },
+    {
+      "threshold": 13,
+      "signals": 3909,
+      "correct": 2976,
+      "win_rate": 76.1,
+      "avg_return": 17.2,
+      "weekly_est": 4
+    },
+    {
+      "threshold": 14,
+      "signals": 1959,
+      "correct": 1592,
+      "win_rate": 81.3,
+      "avg_return": 20.73,
+      "weekly_est": 2
+    },
+    {
+      "threshold": 15,
+      "signals": 1822,
+      "correct": 1513,
+      "win_rate": 83.0,
+      "avg_return": 21.94,
+      "weekly_est": 2
+    },
+    {
+      "threshold": 16,
+      "signals": 653,
+      "correct": 552,
+      "win_rate": 84.5,
+      "avg_return": 21.85,
+      "weekly_est": 1
+    },
+    {
+      "threshold": 17,
+      "signals": 609,
+      "correct": 521,
+      "win_rate": 85.6,
+      "avg_return": 22.89,
+      "weekly_est": 1
+    },
+    {
+      "threshold": 18,
+      "signals": 320,
+      "correct": 266,
+      "win_rate": 83.1,
+      "avg_return": 23.57,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 19,
+      "signals": 198,
+      "correct": 177,
+      "win_rate": 89.4,
+      "avg_return": 29.54,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 20,
+      "signals": 22,
+      "correct": 18,
+      "win_rate": 81.8,
+      "avg_return": 18.85,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 21,
+      "signals": 22,
+      "correct": 18,
+      "win_rate": 81.8,
+      "avg_return": 18.85,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 22,
+      "signals": 18,
+      "correct": 16,
+      "win_rate": 88.9,
+      "avg_return": 19.58,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 23,
+      "signals": 16,
+      "correct": 14,
+      "win_rate": 87.5,
+      "avg_return": 19.05,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 24,
+      "signals": 1,
+      "correct": 1,
+      "win_rate": 100.0,
+      "avg_return": 10.63,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 25,
+      "signals": 1,
+      "correct": 1,
+      "win_rate": 100.0,
+      "avg_return": 10.63,
+      "weekly_est": 0
+    },
+    {
+      "threshold": 26,
+      "signals": 1,
+      "correct": 1,
+      "win_rate": 100.0,
+      "avg_return": 10.63,
+      "weekly_est": 0
+    }
+  ]
+}

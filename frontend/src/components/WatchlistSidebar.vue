@@ -46,6 +46,9 @@ const dragIndex = ref<number | null>(null)
 
 // MV-002: 条件筛选
 interface ConditionRow {
+  period?: number
+  min_value?: number
+  max_value?: number
   type: string
   days: number | null
   operator: string

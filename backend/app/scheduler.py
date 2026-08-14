@@ -16,11 +16,16 @@ scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 
 
 async def daily_kline_update():
-    """Incremental update: fetch latest K-line for all watchlist stocks."""
+    """Incremental update: fetch latest K-line for all watchlist stocks.
+
+    每交易日 15:30（Asia/Shanghai）触发：A 股 15:00 收盘，15:30 当日 K 线已发布。
+    若个别股票当日数据尚未发布/缺失，30 分钟后的 periodic_freshness_check 会补拉。
+    """
     from app.db import async_session_maker
     from app.models.watchlist import Watchlist
+    from app.models.kline_data import KlineData
     from app.services.sync_service import sync_stock_kline
-    from sqlalchemy import select
+    from sqlalchemy import select, func
 
     logger.info("Daily K-line update started")
     async with async_session_maker() as db:
@@ -31,6 +36,7 @@ async def daily_kline_update():
         logger.info("No watchlist stocks to update")
         return
 
+    today_str = date.today().isoformat()
     success = 0
     for code in codes:
         try:
@@ -43,7 +49,20 @@ async def daily_kline_update():
         except Exception as e:
             logger.error(f"Update {code} failed: {e}")
 
-    logger.info(f"Daily update complete: {success}/{len(codes)} stocks")
+    # 校验当日数据覆盖情况（缺失的稍后由 periodic freshness check 补拉）
+    try:
+        async with async_session_maker() as db:
+            count_result = await db.execute(
+                select(func.count(KlineData.id)).where(
+                    KlineData.trade_date == today_str,
+                    KlineData.stock_code.in_(codes),
+                )
+            )
+            covered = count_result.scalar() or 0
+        logger.info(f"Daily update complete: {success}/{len(codes)} stocks, "
+                    f"{covered}/{len(codes)} have today's ({today_str}) data")
+    except Exception as e:
+        logger.warning(f"Daily update coverage check failed: {e}")
 
 
 async def data_integrity_check():
@@ -129,6 +148,20 @@ async def startup_freshness_check():
                 logger.error(f"Startup sync {code} failed: {e}")
     else:
         logger.info(f"Startup freshness check: all {len(codes)} stocks have today's data")
+
+
+async def daily_full_market_sync():
+    """Every trading day at 16:00 Beijing time: fetch today's K-line for all stocks.
+
+    Uses a-stock-data priority routing: Sina → Baidu → Akshare.
+    Runs concurrently (30 parallel) for speed.
+    """
+    from datetime import date as _date
+    today_str = _date.today().isoformat()
+    logger.info(f"Daily full market sync started: {today_str}, fetching K-line for all stocks...")
+    from app.services.sync_service import sync_all_stocks_daily
+    result = await sync_all_stocks_daily(date_str=today_str)
+    logger.info(f"Daily full market sync done: {result}")
 
 
 async def news_refresh_job():
@@ -280,8 +313,20 @@ def start_scheduler():
         max_instances=1,
     )
 
+    # Daily full-market sync at 16:00 (Mon-Fri, Asia/Shanghai)
+    scheduler.add_job(
+        daily_full_market_sync,
+        trigger=CronTrigger(hour=16, minute=0, day_of_week="mon-fri"),
+        id="daily_full_market_sync",
+        name="Daily full market K-line sync (a-stock-data: mootdx->Baidu->Sina->Akshare)",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
+
     scheduler.start()
-    logger.info("Scheduler started: kline@15:30, integrity@16:00, freshness@30min, backup@21:00, warmup@9:00")
+    logger.info("Scheduler started: kline@15:30, full_sync@16:00, integrity@16:05, freshness@30min, backup@21:00, warmup@9:00")
 
 
 async def _periodic_freshness_check():

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -9,6 +10,9 @@ from app.models.watchlist import Watchlist
 from app.schemas import KlineDataRead, KlineResponse
 from app.services.kline_service import compute_adjusted, aggregate_period
 from app.data_sources.mootdx_source import MootdxSource
+from app.data_sources.eastmoney_minute_source import EastmoneyMinuteSource
+
+logger = logging.getLogger(__name__)
 
 
 MINUTE_PERIODS = {"5min", "15min", "30min", "60min"}
@@ -148,17 +152,37 @@ async def get_timeline(code: str, db: AsyncSession = Depends(get_db)):
     if wl:
         stock_name = wl.stock_name
 
+    # Try mootdx first, fallback to eastmoney
+    import asyncio
+    
+    # Try mootdx with timeout
     try:
         src = MootdxSource()
+        result = await asyncio.wait_for(src.fetch_minute(code), timeout=5.0)
+        if result.get("data") and len(result["data"]) > 0:
+            return {
+                "code": code,
+                "name": stock_name,
+                "prev_close": result.get("prev_close", 0),
+                "data": result.get("data", []),
+                "count": len(result.get("data", [])),
+            }
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning(f"Mootdx timeline failed for {code}: {e}")
+    
+    # Fallback to eastmoney
+    try:
+        src = EastmoneyMinuteSource()
         result = await src.fetch_minute(code)
         return {
             "code": code,
             "name": stock_name,
-            "prev_close": result["prev_close"],
-            "data": result["data"],
-            "count": len(result["data"]),
+            "prev_close": result.get("prev_close", 0),
+            "data": result.get("data", []),
+            "count": len(result.get("data", [])),
         }
     except Exception as e:
+        logger.error(f"Eastmoney timeline error for {code}: {e}")
         return {
             "code": code,
             "name": stock_name,

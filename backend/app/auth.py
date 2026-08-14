@@ -41,6 +41,10 @@ async def auth_middleware_handler(request: Request, call_next):
     if path.startswith(("/api/health", "/api/auth/")):
         return await call_next(request)
 
+    # OPTIONS preflight: bypass auth so CORS headers get through
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     key = extract_key(request)
     if not key or not verify_key(key):
         return JSONResponse(status_code=401, content={"detail": "Invalid or missing access key"})

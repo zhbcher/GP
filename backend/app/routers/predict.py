@@ -11,6 +11,45 @@ from app.services.predictors import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/stock", tags=["predict"])
 
+SIGNALS_DIR = "/Users/zhoubo/GP/scripts/trained_models"
+
+
+def _latest_signal_file():
+    import glob, os
+    files = sorted(glob.glob(os.path.join(SIGNALS_DIR, "signals_*.json")))
+    return files[-1] if files else None
+
+
+@router.get("/{code}/signals")
+async def get_stock_signals(code: str, db: AsyncSession = Depends(get_db)):
+    """返回某只股票的最新超跌反弹信号（原版 base / 震荡增强版 consolidation）。"""
+    path = _latest_signal_file()
+    if not path:
+        return {"code": code, "date": None, "base": [], "consolidation": []}
+    import json
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except Exception as e:
+        return {"code": code, "date": data.get("date") if 'data' in dir() else None, "base": [], "consolidation": [], "error": str(e)}
+    date = data.get("date")
+    base = data.get("base", {})
+    consol = data.get("consolidation", {})
+    # 收集该股票在所有阈值下的信号
+    def collect(version_map):
+        out = []
+        for thresh, items in version_map.items():
+            for it in items:
+                if it.get("code") == code:
+                    out.append({"threshold": int(thresh), "price": it.get("price"), "votes": it.get("votes")})
+        return out
+    return {
+        "code": code,
+        "date": date,
+        "base": collect(base),
+        "consolidation": collect(consol),
+    }
+
 @router.get("/{code}/predict")
 async def predict_stock(code: str, days: int = 5, llm: bool = False, db: AsyncSession = Depends(get_db)):
     if days < 1 or days > 20:
@@ -95,3 +134,35 @@ async def predict_stock(code: str, days: int = 5, llm: bool = False, db: AsyncSe
         "ensemble": ensemble_result,
         **({"llm": llm_result} if llm_result else {}),
     }
+
+# ====== 超跌反弹信号（双版本）======
+import json as _json
+import glob as _glob
+import os as _os
+
+@router.get("/{code}/oversold-signals")
+async def get_oversold_signals(code: str, db: AsyncSession = Depends(get_db)):
+    signals_dir = "/Users/zhoubo/GP/scripts/trained_models"
+    signal_files = sorted(_glob.glob(_os.path.join(signals_dir, "signals_*.json")))
+    if not signal_files:
+        return {"base": {}, "consolidation": {}, "note": "尚未运行信号生成"}
+    latest = signal_files[-1]
+    try:
+        with open(latest, 'r') as f:
+            data = _json.load(f)
+    except:
+        return {"base": {}, "consolidation": {}, "note": "读取失败"}
+    result = {"base": {}, "consolidation": {}, "date": data.get("date", "")}
+    for version in ["base", "consolidation"]:
+        for tkey, stock_list in data.get(version, {}).items():
+            if isinstance(stock_list, list):
+                for item in stock_list:
+                    c = item.get("code", "")
+                    if c == code or f"{c}.SH" == code or f"{c}.SZ" == code:
+                        result[version][tkey] = {"found": True, "price": item.get("price"), "votes": item.get("votes")}
+                        break
+                else:
+                    result[version][tkey] = {"found": False}
+            else:
+                result[version][tkey] = {"found": False}
+    return result

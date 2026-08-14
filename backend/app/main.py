@@ -237,11 +237,15 @@ async def lifespan(app: FastAPI):
     # Start APScheduler for daily updates
     start_scheduler()
 
-    # Startup freshness check: backfill today's data if missing (e.g. server was down at 15:30)
-    try:
-        await startup_freshness_check()
-    except Exception as e:
-        logger.error(f"Startup freshness check failed: {e}")
+    # Startup freshness check: fire-and-forget with timeout to avoid blocking startup
+    async def _freshness_with_timeout():
+        try:
+            await asyncio.wait_for(startup_freshness_check(), timeout=30)
+        except asyncio.TimeoutError:
+            logger.warning("Startup freshness check timed out (mootdx unreachable), skipping")
+        except Exception as e:
+            logger.error(f"Startup freshness check failed: {e}")
+    asyncio.create_task(_freshness_with_timeout())
 
     # Load persisted news from DB into memory cache
     from app.services.news_service_v2 import load_news_on_startup
@@ -251,6 +255,11 @@ async def lifespan(app: FastAPI):
 
     poll_task.cancel()
     stop_scheduler()
+
+
+async def startup_fast():
+    """Fast startup without freshness check (avoids mootdx timeout)."""
+    pass
 
 
 app = FastAPI(

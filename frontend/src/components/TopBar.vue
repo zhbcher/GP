@@ -35,30 +35,23 @@ const adjusts: { key: AdjustType; label: string }[] = [
 ]
 
 async function onSearch() {
-  if (searchQuery.value.length < 1) {
+  if (!searchQuery.value || searchQuery.value.trim().length < 1) {
     searchResults.value = []
     showSearch.value = false
     return
   }
   try {
     searchResults.value = await stockApi.search(searchQuery.value)
-    showSearch.value = true
+    showSearch.value = searchResults.value.length > 0
   } catch (e) {
     console.error('Search failed:', e)
   }
 }
 
-let hideTimer: ReturnType<typeof setTimeout> | null = null
-
-function onSearchFocus() {
-  clearTimeout(hideTimer!)
-  if (searchQuery.value.length > 0) {
-    showSearch.value = true
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    onSearch()
   }
-}
-
-function onSearchBlur() {
-  hideTimer = setTimeout(() => { showSearch.value = false }, 200)
 }
 
 async function selectStock(item: { code: string; name: string }) {
@@ -120,13 +113,14 @@ function triggerRestore() {
   <div class="top-bar">
     <div class="left-section">
       <div class="search-box">
-        <input
-          v-model="searchQuery"
-          placeholder="搜索股票代码/名称/拼音..."
-          @input="onSearch"
-          @focus="onSearchFocus"
-          @blur="onSearchBlur"
-        />
+        <div class="search-input-wrapper">
+          <input
+            v-model="searchQuery"
+            placeholder="搜索股票代码/名称..."
+            @keydown.enter="onSearch"
+          />
+          <button class="search-btn" @click="onSearch" title="搜索">🔍</button>
+        </div>
         <Transition name="fade">
           <div v-if="showSearch && searchResults.length > 0" class="search-dropdown">
             <div
@@ -137,7 +131,11 @@ function triggerRestore() {
             >
               <span class="search-code">{{ item.code }}</span>
               <span class="search-name">{{ item.name }}</span>
-              <button class="add-watchlist-btn" @mousedown.prevent.stop="addToWatchlist(item)" title="加入自选">+</button>
+              <button 
+                class="add-watchlist-btn" 
+                @mousedown.prevent.stop="addToWatchlist(item)" 
+                :title="'加入自选'"
+              >+</button>
             </div>
           </div>
         </Transition>
@@ -226,13 +224,19 @@ function triggerRestore() {
   position: relative;
 }
 
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .search-box input {
-  width: 200px;
+  width: 180px;
   height: 32px;
   padding: 0 12px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 6px 0 0 6px;
   color: var(--text-primary);
   font-size: 13px;
   outline: none;
@@ -240,6 +244,24 @@ function triggerRestore() {
 
 .search-box input:focus {
   border-color: #3b82f6;
+}
+
+.search-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  border: none;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.15s;
+}
+
+.search-btn:hover {
+  opacity: 0.85;
 }
 
 .search-dropdown {

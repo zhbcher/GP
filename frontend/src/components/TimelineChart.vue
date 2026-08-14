@@ -47,7 +47,28 @@ async function loadData() {
   try {
     const resp = await stockApi.getTimeline(stockStore.currentCode)
     data = resp.data
-    prevClose = resp.prev_close
+    prevClose = resp.prev_close || 0
+    
+    // Check if market is closed (empty data with no error)
+    if (!data || data.length === 0) {
+      const now = new Date()
+      const hour = now.getHours()
+      const minute = now.getMinutes()
+      const timeInMinutes = hour * 60 + minute
+      
+      // Market hours: 9:30-11:30, 13:00-15:00
+      const isMarketOpen = (
+        (timeInMinutes >= 570 && timeInMinutes <= 690) || // 9:30-11:30
+        (timeInMinutes >= 780 && timeInMinutes <= 900)    // 13:00-15:00
+      ) && now.getDay() >= 1 && now.getDay() <= 5 // Monday-Friday
+      
+      if (!isMarketOpen) {
+        error.value = '市场已收盘'
+      } else {
+        error.value = '暂无分时数据'
+      }
+    }
+    
     draw()
   } catch (e: any) {
     error.value = e?.message || '加载失败'

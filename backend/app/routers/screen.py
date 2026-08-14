@@ -2,6 +2,7 @@
 
 from typing import Any
 import math
+import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -32,6 +33,14 @@ class Condition(BaseModel):
 
 class ScreenRequest(BaseModel):
     conditions: list[Condition]
+    logic: str | None = None  # "OR" | "AND" (default: OR)
+
+class ScreenBacktestRequest(BaseModel):
+    conditions: list[Condition]
+    logic: str | None = None  # "OR" | "AND"
+    horizon: int | None = 5  # 预测 horizon (default 5 trading days)
+    lookback: int | None = 500  # 每只股票回看多少根K线
+    direction: str | None = "up"  # 预测方向: up / down
 
 
 # ---- Indicator helpers ----
@@ -207,48 +216,22 @@ async def screen_stocks(req: ScreenRequest, db: AsyncSession = Depends(get_db)):
         closes = [k.close for k in klines]
         volumes = [k.volume for k in klines]
 
-        # 3. Check all conditions (AND)
-        all_pass = True
+        # 3. Check conditions with OR / AND logic
+        logic = (req.logic or "OR").upper()
+        or_hit = False
+        and_hit = True
+        hit_conditions: list[str] = []
+
         for cond in req.conditions:
-            if cond.type == "return_pct":
-                if not _check_return_pct(closes, cond):
-                    all_pass = False
-                    break
-            elif cond.type == "above_ma":
-                if not _check_above_ma(closes, cond):
-                    all_pass = False
-                    break
-            elif cond.type == "macd_golden_cross":
-                if not _check_macd_golden_cross(closes):
-                    all_pass = False
-                    break
-            elif cond.type == "volume_surge":
-                if not _check_volume_surge(volumes, cond):
-                    all_pass = False
-                    break
-            elif cond.type == "rsi_oversold":
-                if not _check_rsi(closes, cond, oversold=True):
-                    all_pass = False
-                    break
-            elif cond.type == "rsi_overbought":
-                if not _check_rsi(closes, cond, oversold=False):
-                    all_pass = False
-                    break
-            elif cond.type == "boll_touch_lower":
-                if not _check_boll(closes, cond, lower=True):
-                    all_pass = False
-                    break
-            elif cond.type == "boll_touch_upper":
-                if not _check_boll(closes, cond, lower=False):
-                    all_pass = False
-                    break
-            elif cond.type == "return_range":
-                if not _check_return_range(closes, cond):
-                    all_pass = False
-                    break
-            else:
-                all_pass = False
-                break
+            passed = _evaluate_condition(closes, volumes, cond)
+            if passed:
+                hit_conditions.append(cond.type)
+
+        if logic == "OR":
+            all_pass = len(hit_conditions) > 0
+        else:
+            # AND: all conditions must pass
+            all_pass = len(hit_conditions) == len(req.conditions)
 
         if all_pass:
             results.append({
@@ -258,4 +241,192 @@ async def screen_stocks(req: ScreenRequest, db: AsyncSession = Depends(get_db)):
                 "latest_close": closes[-1],
             })
 
-    return {"results": results, "total": len(results)}
+    return {"results": results, "total": len(results), "logic": logic}
+
+
+# ---- Backtest route ----
+
+@router.post("/screen/backtest")
+async def screen_backtest(req: ScreenBacktestRequest, db: AsyncSession = Depends(get_db)):
+    """回测：对自选股历史K线逐日应用筛选条件，计算胜率和关键指标。
+
+    回测方法：
+    1. 对每只股票，从第 MIN_DATA 根 K 线开始，逐根判断条件是否触发
+    2. 若触发，看 horizon 交易日后的收盘价方向
+    3. 统计：触发次数、正确次数、胜率、平均盈亏、最大回撤
+    4. 同时统计单因子胜率和 OR/AND 组合胜率
+    """
+    horizon = req.horizon or 5
+    lookback = req.lookback or 500
+    direction = (req.direction or "up").lower()
+    logic = (req.logic or "OR").upper()
+
+    # 最小数据量（RSI=14, MA20 等需要至少 40 根）
+    MIN_DATA = 50
+
+    wl_result = await db.execute(select(Watchlist).order_by(Watchlist.id))
+    watchlist_items = wl_result.scalars().all()
+    if not watchlist_items:
+        return {"error": "watchlist_empty", "results": []}
+
+    condition_names = [c.type for c in req.conditions]
+    results_by_stock: list[dict] = []
+    total_triggers = 0
+    total_correct = 0
+    per_factor_stats: dict[str, dict] = {}
+    for name in condition_names:
+        per_factor_stats[name] = {"triggers": 0, "correct": 0}
+
+    for item in watchlist_items:
+        kq = (
+            select(KlineData)
+            .where(KlineData.stock_code == item.stock_code)
+            .order_by(KlineData.trade_date)
+        )
+        k_result = await db.execute(kq)
+        klines = list(k_result.scalars().all())
+        if len(klines) < MIN_DATA + horizon:
+            continue
+
+        closes = [k.close for k in klines]
+        volumes = [k.volume for k in klines]
+        dates = [k.trade_date for k in klines]
+
+        stock_triggers = 0
+        stock_correct = 0
+        trades: list[dict] = []
+
+        end_idx = len(klines) - horizon
+        for t in range(MIN_DATA, end_idx):
+            # 用 t 及之前的数据计算条件
+            window_closes = closes[: t + 1]
+            window_volumes = volumes[: t + 1]
+
+            hit_flags: dict[str, bool] = {}
+            for cond in req.conditions:
+                hit_flags[cond.type] = _evaluate_condition(window_closes, window_volumes, cond)
+
+            # 判断组合是否触发
+            if logic == "OR":
+                triggered = any(hit_flags.values())
+            else:
+                triggered = all(hit_flags.values())
+
+            if not triggered:
+                continue
+
+            # 检查实际方向
+            entry_price = closes[t]
+            exit_price = closes[t + horizon]
+            ret = (exit_price - entry_price) / entry_price
+            actual_up = ret > 0
+            if direction == "up":
+                correct = actual_up
+            else:
+                correct = not actual_up
+
+            triggered_factors = [k for k, v in hit_flags.items() if v]
+            for f in triggered_factors:
+                per_factor_stats[f]["triggers"] += 1
+                if correct:
+                    per_factor_stats[f]["correct"] += 1
+
+            total_triggers += 1
+            stock_triggers += 1
+            if correct:
+                total_correct += 1
+                stock_correct += 1
+
+            trades.append({
+                "date": dates[t],
+                "exit_date": dates[t + horizon],
+                "entry_price": round(entry_price, 2),
+                "exit_price": round(exit_price, 2),
+                "return_pct": round(ret * 100, 2),
+                "correct": correct,
+                "hit_factors": triggered_factors,
+            })
+
+        # 计算每只股票的统计
+        avg_ret = 0.0
+        max_drawdown = 0.0
+        peak = 1.0
+        cum_ret = 1.0
+        max_win = 0.0
+        max_loss = 0.0
+        for tr in trades:
+            r = tr["return_pct"] / 100
+            cum_ret *= (1 + r)
+            peak = max(peak, cum_ret)
+            drawdown = (peak - cum_ret) / peak
+            max_drawdown = max(max_drawdown, drawdown)
+            max_win = max(max_win, r)
+            max_loss = min(max_loss, r)
+            avg_ret += r
+
+        n = len(trades)
+        stock_wr = round(stock_correct / n * 100, 1) if n > 0 else 0
+        results_by_stock.append({
+            "stock_code": item.stock_code,
+            "stock_name": item.stock_name,
+            "triggers": n,
+            "correct": stock_correct,
+            "win_rate_pct": stock_wr,
+            "avg_return_pct": round(avg_ret / n * 100, 2) if n > 0 else 0,
+            "max_drawdown_pct": round(max_drawdown * 100, 2),
+            "max_win_pct": round(max_win * 100, 2),
+            "max_loss_pct": round(max_loss * 100, 2),
+            "total_return_pct": round((cum_ret - 1) * 100, 2),
+            "trades_sample": trades[-10:],  # 最近10笔
+        })
+
+    # 单因子统计
+    factor_results = []
+    for name, s in per_factor_stats.items():
+        wr = round(s["correct"] / s["triggers"] * 100, 1) if s["triggers"] > 0 else 0
+        factor_results.append({
+            "factor": name,
+            "triggers": s["triggers"],
+            "correct": s["correct"],
+            "win_rate_pct": wr,
+        })
+
+    # 按胜率排序
+    factor_results.sort(key=lambda x: x["win_rate_pct"], reverse=True)
+
+    overall_wr = round(total_correct / total_triggers * 100, 1) if total_triggers > 0 else 0
+    return {
+        "logic": logic,
+        "horizon": horizon,
+        "direction": direction,
+        "overall": {
+            "total_triggers": total_triggers,
+            "correct": total_correct,
+            "win_rate_pct": overall_wr,
+        },
+        "per_factor": factor_results,
+        "per_stock": results_by_stock,
+    }
+
+
+def _evaluate_condition(closes: list[float], volumes: list[int], cond: Condition) -> bool:
+    """统一条件评估入口。"""
+    if cond.type == "return_pct":
+        return _check_return_pct(closes, cond)
+    elif cond.type == "above_ma":
+        return _check_above_ma(closes, cond)
+    elif cond.type == "macd_golden_cross":
+        return _check_macd_golden_cross(closes)
+    elif cond.type == "volume_surge":
+        return _check_volume_surge(volumes, cond)
+    elif cond.type == "rsi_oversold":
+        return _check_rsi(closes, cond, oversold=True)
+    elif cond.type == "rsi_overbought":
+        return _check_rsi(closes, cond, oversold=False)
+    elif cond.type == "boll_touch_lower":
+        return _check_boll(closes, cond, lower=True)
+    elif cond.type == "boll_touch_upper":
+        return _check_boll(closes, cond, lower=False)
+    elif cond.type == "return_range":
+        return _check_return_range(closes, cond)
+    return False

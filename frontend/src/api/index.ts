@@ -81,8 +81,16 @@ export const stockApi = {
   getKline(code: string, period = 'daily', adjust = 'qfq', limit = 2500): Promise<KlineResponse> {
     return api.get(`/stock/${code}/kline`, { params: { period, adjust, limit } }).then(r => r.data)
   },
+
+  getOversoldSignals(code: string): Promise<any> {
+    return api.get(`/stock/${code}/oversold-signals`).then(r => r.data)
+  },
+
   getMinute(code: string): Promise<MinuteResponse> {
     return api.get(`/stock/${code}/minute`).then(r => r.data)
+  },
+  getSignals(code: string): Promise<{ code: string, date?: string, base: any[], consolidation: any[] }> {
+    return api.get(`/stock/${code}/signals`).then(r => r.data)
   },
   getTimeline(code: string): Promise<TimelineResponse> {
     return api.get(`/stock/${code}/timeline`).then(r => r.data)

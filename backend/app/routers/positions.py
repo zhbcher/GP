@@ -37,16 +37,20 @@ async def positions_summary(db: AsyncSession = Depends(get_db)):
         prices[code] = close or 0.0
         price_sources[code] = "close"
 
-    # Overlay realtime quotes when available
+    # Overlay realtime quotes when available (with timeout to avoid blocking)
     if codes:
         try:
+            import asyncio
             from app.data_sources.mootdx_source import MootdxSource
             src = MootdxSource()
-            quotes = await src.fetch_realtime(codes)
+            # Use asyncio.wait_for to add timeout
+            quotes = await asyncio.wait_for(src.fetch_realtime(codes), timeout=3.0)
             for code, q in quotes.items():
                 if q.get("price", 0) > 0:
                     prices[code] = q["price"]
                     price_sources[code] = "realtime"
+        except asyncio.TimeoutError:
+            logger.warning("Realtime quotes timeout, using closing prices")
         except Exception as e:
             logger.warning(f"Realtime quotes for summary failed: {e}")
 

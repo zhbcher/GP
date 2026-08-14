@@ -3,7 +3,7 @@
  * v10 changes vs v9: registerOverlay is global (not chart method),
  * circle attrs use x/y/r (not cx/cy/r), removeOverlay uses filter object.
  */
-import { init, registerOverlay, registerHotkey, dispose } from 'klinecharts'
+import { init, registerOverlay, dispose, registerHotkey } from 'klinecharts'
 import type { Chart } from 'klinecharts'
 import type { AnnotationExtendData } from '@/types/annotation'
 import { ANNOTATION_COLORS } from '@/types/annotation'
@@ -77,7 +77,10 @@ export function createChart(container: HTMLElement): Chart {
     ;(window as any).__chart = chart
 
     // Volume sub-chart (VOL indicator in a separate pane)
+    // Set volume pane to 25% of container height (initial layout)
     chart.createIndicator({ name: 'VOL', paneId: 'volume_pane' }, false)
+    // Adjust volume pane height after creation
+    chart.setPaneOptions({ id: 'volume_pane', height: 270 })
 
     // Default main-chart indicators: MA
     chart.createIndicator({ name: 'MA', paneId: 'candle_pane' }, true)
@@ -227,6 +230,57 @@ export function registerLimitMarkOverlay() {
   })
 }
 
+/**
+ * FE: 超跌反弹信号 overlay
+ * 原版：红色圆点 ●（base）
+ * 震荡增强版：红色小三角形 ▲（consolidation）
+ */
+
+/**
+ * Oversold rebound signal overlay
+ * base (原版): red dot ●
+ * consolidation (震荡增强): red triangle ▲
+ */
+export function registerSignalMarkOverlay() {
+  registerOverlay<{ kind: string }>({
+    name: 'signalDot',
+    totalStep: 1,
+    needDefaultPointFigure: false,
+    mode: 'weak_magnet',
+    createPointFigures: (params: any) => {
+      const { coordinates } = params
+      if (coordinates.length === 0) return []
+      const p = coordinates[0]
+      return [{
+        type: 'circle',
+        attrs: { x: p.x, y: p.y, r: 5 },
+        styles: { style: 'fill' as const, color: '#ef4444', borderColor: '#ef4444', borderSize: 1 },
+      }]
+    },
+  })
+  registerOverlay<{ kind: string }>({
+    name: 'signalTriangle',
+    totalStep: 1,
+    needDefaultPointFigure: false,
+    mode: 'weak_magnet',
+    createPointFigures: (params: any) => {
+      const { coordinates } = params
+      if (coordinates.length === 0) return []
+      const p = coordinates[0]
+      const size = 5
+      return [{
+        type: 'polygon',
+        attrs: { coordinates: [
+          { x: p.x, y: p.y - size - 4 },
+          { x: p.x - size, y: p.y - 4 },
+          { x: p.x + size, y: p.y - 4 },
+        ]},
+        styles: { style: 'fill' as const, color: '#ef4444' },
+      }]
+    },
+  })
+}
+
 export function createAnnotationOverlay(data: {
   annotationId: string
   type: string
@@ -270,6 +324,7 @@ export function removeAnnotationOverlay(annotationId: string) {
     chart.removeOverlay({ id: overlay.id })
   }
 }
+
 
 export function clearAllOverlays() {
   if (!chart) return

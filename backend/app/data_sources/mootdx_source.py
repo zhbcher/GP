@@ -36,8 +36,11 @@ class MootdxSource(BaseDataSource):
         self._client = None
 
     def _get_client(self):
+        """获取mootdx客户端，使用缓存避免重复创建"""
         if self._client is None:
-            self._client = tdx_client(market="std")
+            # 直接使用第一个已知可用的服务器，跳过bestip选择
+            from mootdx.quotes import Quotes
+            self._client = Quotes.factory(market='std', server=('119.97.185.59', 7709))
         return self._client
 
     def _check_available(self) -> bool:
@@ -336,11 +339,28 @@ class MootdxSource(BaseDataSource):
             client = self._get_client()
             pure_code = code[2:]
 
-            # Get prev_close from realtime quotes
+            # Get prev_close from realtime quotes (trading hours only)
             qdf = client.quotes(symbol=[pure_code])
             prev_close = 0.0
             if qdf is not None and not qdf.empty:
                 prev_close = float(qdf.iloc[0].get("last_close", 0))
+
+            # Fallback: try database if quotes unavailable (non-trading hours)
+            if prev_close == 0.0:
+                try:
+                    import sqlite3
+                    import os
+                    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "stock.db")
+                    if os.path.exists(db_path):
+                        conn = sqlite3.connect(db_path)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT close FROM kline_data WHERE stock_code = ? ORDER BY trade_date DESC LIMIT 1", (code,))
+                        row = cursor.fetchone()
+                        if row:
+                            prev_close = float(row[0])
+                        conn.close()
+                except Exception as e:
+                    logger.debug(f"DB fallback for prev_close failed: {e}")
 
             # Get today's minute data (240 points: 9:30-11:30 + 13:00-15:00)
             df = client.minute(symbol=pure_code)
@@ -381,7 +401,31 @@ class MootdxSource(BaseDataSource):
             return {"prev_close": prev_close, "data": data}
 
         try:
-            return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+            # Add timeout to prevent hanging (45秒：bestip测试约20秒 + minute查询约1秒)
+            loop = asyncio.get_event_loop()
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, _fetch),
+                timeout=45.0
+            )
+            return result
+        except asyncio.TimeoutError:
+            logger.warning(f"mootdx minute timeout for {code}, using database fallback")
+            # Timeout fallback: use database prev_close if available
+            try:
+                import sqlite3
+                import os
+                db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "stock.db")
+                if os.path.exists(db_path):
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT close FROM kline_data WHERE stock_code = ? ORDER BY trade_date DESC LIMIT 1", (code,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    if row:
+                        return {"prev_close": float(row[0]), "data": []}
+            except Exception as e:
+                logger.debug(f"DB fallback for prev_close failed: {e}")
+            return {"prev_close": 0, "data": []}
         except Exception as e:
             logger.error(f"mootdx minute error: {e}")
             raise DataSourceError(f"mootdx minute: {e}")
