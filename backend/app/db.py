@@ -8,6 +8,7 @@ engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     future=True,
+    connect_args={"timeout": 30},  # SQLite 忙等待 30s，缓解多进程写竞争
 )
 
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

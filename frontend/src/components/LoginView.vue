@@ -32,9 +32,13 @@ async function doVerify() {
 <template>
   <div class="login-container">
     <div class="login-card">
-      <div class="login-icon">📈</div>
+      <div class="login-icon">
+        📈
+      </div>
       <h1>自选股看盘系统</h1>
-      <p class="login-subtitle">请输入访问密钥</p>
+      <p class="login-subtitle">
+        请输入访问密钥
+      </p>
       <form @submit.prevent="doVerify">
         <input
           v-model="accessKey"
@@ -42,13 +46,23 @@ async function doVerify() {
           placeholder="访问密钥"
           autofocus
           :disabled="loading"
-        />
-        <p v-if="error" class="login-error">{{ error }}</p>
-        <button type="submit" :disabled="loading">
+        >
+        <p
+          v-if="error"
+          class="login-error"
+        >
+          {{ error }}
+        </p>
+        <button
+          type="submit"
+          :disabled="loading"
+        >
           {{ loading ? '验证中...' : '进入系统' }}
         </button>
       </form>
-      <p class="login-hint">提示：也可以用 URL 参数访问，如 <code>?key=***</code></p>
+      <p class="login-hint">
+        提示：也可以用 URL 参数访问，如 <code>?key=***</code>
+      </p>
     </div>
   </div>
 </template>

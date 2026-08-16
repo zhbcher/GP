@@ -30,13 +30,34 @@ urllib.request.install_opener(
 
 # ── mootdx Client ─────────────────────────────────────────────────────────────
 
-_TDXTCP_SERVERS = [
+# 通达信服务器列表（可配置）：环境变量 TDX_SERVERS 覆盖，格式 "ip:port,ip:port"
+_TDXTCP_SERVERS_DEFAULT = [
     ('218.75.126.9', 7709),   # ✅ 2026-08-14 实测可用：日/周/月K、五档盘口、46字段报价
     ('119.97.185.59', 7709), ('124.70.133.119', 7709), ('116.205.183.150', 7709),
     ('123.60.73.44', 7709), ('116.205.163.254', 7709), ('121.36.225.169', 7709),
     ('123.60.70.228', 7709), ('124.71.9.153', 7709), ('110.41.147.114', 7709),
     ('124.71.187.122', 7709),
 ]
+
+
+def _load_tdx_servers():
+    """从环境变量 TDX_SERVERS 加载服务器列表，未设置则用默认。"""
+    raw = os.environ.get("TDX_SERVERS", "").strip()
+    if not raw:
+        return list(_TDXTCP_SERVERS_DEFAULT)
+    servers = []
+    for item in raw.split(","):
+        item = item.strip()
+        if ":" in item:
+            ip, port = item.rsplit(":", 1)
+            try:
+                servers.append((ip.strip(), int(port)))
+            except ValueError:
+                continue
+    return servers or list(_TDXTCP_SERVERS_DEFAULT)
+
+
+_TDXTCP_SERVERS = _load_tdx_servers()
 
 
 def _probe_tdx(ip: str, port: int, timeout: float = 2.0) -> bool:

@@ -97,7 +97,7 @@ function locateTrade(pair: TradePair) {
   const targetDate = pair.buy_date
   const klineItem = stockStore.klineData.find(k => {
     const d = new Date(k.timestamp)
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
     return dateStr === targetDate
   })
   if (klineItem) {
@@ -111,7 +111,7 @@ function locateAnnotation(ann: Annotation) {
   if (!chart) return
   const klineItem = stockStore.klineData.find(k => {
     const d = new Date(k.timestamp)
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
     return dateStr === ann.trade_date
   })
   if (klineItem) {
@@ -142,7 +142,8 @@ function openEditor(annotationId?: string, detail?: any) {
       formDate.value = detail.tradeDate
     } else {
       const now = new Date()
-      formDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const bj = new Date(now.getTime() + 8 * 3600 * 1000)
+      formDate.value = `${bj.getUTCFullYear()}-${String(bj.getUTCMonth() + 1).padStart(2, '0')}-${String(bj.getUTCDate()).padStart(2, '0')}`
     }
   }
   editorVisible.value = true
@@ -165,7 +166,7 @@ async function handleSave() {
     // Create overlay for the new annotation
     const klineItem = stockStore.klineData.find(k => {
       const d = new Date(k.timestamp)
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
       return dateStr === ann.trade_date
     })
     if (klineItem) {
@@ -222,8 +223,18 @@ onUnmounted(() => {
   <div class="annotation-panel">
     <!-- Tab Switcher -->
     <div class="tab-bar">
-      <button :class="['tab-btn', { active: activeTab === 'list' }]" @click="activeTab = 'list'">标注列表</button>
-      <button :class="['tab-btn', { active: activeTab === 'trades' }]" @click="activeTab = 'trades'">交易复盘</button>
+      <button
+        :class="['tab-btn', { active: activeTab === 'list' }]"
+        @click="activeTab = 'list'"
+      >
+        标注列表
+      </button>
+      <button
+        :class="['tab-btn', { active: activeTab === 'trades' }]"
+        @click="activeTab = 'trades'"
+      >
+        交易复盘
+      </button>
     </div>
 
     <!-- Tab: 标注列表 -->
@@ -231,9 +242,27 @@ onUnmounted(() => {
       <div class="panel-header">
         <h3>标注列表 ({{ annotationStore.visibleAnnotations.length }})</h3>
         <div class="header-actions">
-          <button class="action-btn" @click="openEditor()" title="新建标注">+ 新建</button>
-          <button class="action-btn" @click="handleExport" title="导出">导出</button>
-          <button class="action-btn danger" @click="handleBatchDelete" title="删除全部">清空</button>
+          <button
+            class="action-btn"
+            title="新建标注"
+            @click="openEditor()"
+          >
+            + 新建
+          </button>
+          <button
+            class="action-btn"
+            title="导出"
+            @click="handleExport"
+          >
+            导出
+          </button>
+          <button
+            class="action-btn danger"
+            title="删除全部"
+            @click="handleBatchDelete"
+          >
+            清空
+          </button>
         </div>
       </div>
       <div class="annotation-list">
@@ -244,20 +273,33 @@ onUnmounted(() => {
           :class="{ selected: annotationStore.selectedId === ann.id }"
           @click="locateAnnotation(ann); openEditor(ann.id)"
         >
-          <div class="annotation-color-bar" :style="{ background: ANNOTATION_COLORS[ann.type] }"></div>
+          <div
+            class="annotation-color-bar"
+            :style="{ background: ANNOTATION_COLORS[ann.type] }"
+          />
           <div class="annotation-body">
             <div class="annotation-meta">
               <span class="annotation-date">{{ ann.trade_date }}</span>
-              <span class="annotation-type" :style="{ color: ANNOTATION_COLORS[ann.type] }">
+              <span
+                class="annotation-type"
+                :style="{ color: ANNOTATION_COLORS[ann.type] }"
+              >
                 {{ ANNOTATION_LABELS[ann.type] }}
               </span>
             </div>
-            <div class="annotation-content">{{ ann.content }}</div>
+            <div class="annotation-content">
+              {{ ann.content }}
+            </div>
           </div>
         </div>
-        <div v-if="annotationStore.visibleAnnotations.length === 0" class="empty-state">
+        <div
+          v-if="annotationStore.visibleAnnotations.length === 0"
+          class="empty-state"
+        >
           <p>暂无标注</p>
-          <p class="hint">点击工具栏"标注"按钮，然后在K线上点击添加</p>
+          <p class="hint">
+            点击工具栏"标注"按钮，然后在K线上点击添加
+          </p>
         </div>
       </div>
     </template>
@@ -265,7 +307,12 @@ onUnmounted(() => {
     <!-- Tab: 交易复盘 -->
     <template v-if="activeTab === 'trades'">
       <div class="trade-panel">
-        <div v-if="tradePairsLoading" class="empty-state"><p>加载中...</p></div>
+        <div
+          v-if="tradePairsLoading"
+          class="empty-state"
+        >
+          <p>加载中...</p>
+        </div>
         <div v-else-if="tradePairsData && tradePairsData.pairs.length > 0">
           <!-- Summary Card -->
           <div class="trade-summary">
@@ -275,13 +322,19 @@ onUnmounted(() => {
             </div>
             <div class="summary-item">
               <span class="summary-label">胜率</span>
-              <span class="summary-value" :class="tradePairsData.summary.win_rate >= 50 ? 'profit' : 'loss'">
+              <span
+                class="summary-value"
+                :class="tradePairsData.summary.win_rate >= 50 ? 'profit' : 'loss'"
+              >
                 {{ tradePairsData.summary.win_rate }}%
               </span>
             </div>
             <div class="summary-item">
               <span class="summary-label">平均收益</span>
-              <span class="summary-value" :class="tradePairsData.summary.avg_return_pct >= 0 ? 'profit' : 'loss'">
+              <span
+                class="summary-value"
+                :class="tradePairsData.summary.avg_return_pct >= 0 ? 'profit' : 'loss'"
+              >
                 {{ tradePairsData.summary.avg_return_pct >= 0 ? '+' : '' }}{{ tradePairsData.summary.avg_return_pct }}%
               </span>
             </div>
@@ -306,16 +359,24 @@ onUnmounted(() => {
               <span class="col-price">{{ pair.buy_price ? pair.buy_price.toFixed(2) : '-' }}</span>
               <span class="col-date">{{ pair.sell_date || '持仓中' }}</span>
               <span class="col-price">{{ pair.sell_price ? pair.sell_price.toFixed(2) : '-' }}</span>
-              <span class="col-return" :class="pair.return_pct === null ? '' : (pair.return_pct >= 0 ? 'profit' : 'loss')">
+              <span
+                class="col-return"
+                :class="pair.return_pct === null ? '' : (pair.return_pct >= 0 ? 'profit' : 'loss')"
+              >
                 {{ pair.return_pct !== null ? (pair.return_pct >= 0 ? '+' : '') + pair.return_pct + '%' : '-' }}
               </span>
               <span class="col-days">{{ pair.holding_days !== null ? pair.holding_days : '-' }}</span>
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">
+        <div
+          v-else
+          class="empty-state"
+        >
           <p>暂无买卖标注</p>
-          <p class="hint">添加买入/卖出标注后可查看交易复盘</p>
+          <p class="hint">
+            添加买入/卖出标注后可查看交易复盘
+          </p>
         </div>
       </div>
     </template>
@@ -323,7 +384,11 @@ onUnmounted(() => {
 
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="editorVisible" class="editor-backdrop" @click.self="closeEditor">
+      <div
+        v-if="editorVisible"
+        class="editor-backdrop"
+        @click.self="closeEditor"
+      >
         <div class="editor-panel">
           <h3>{{ editingAnnotation ? '编辑标注' : '新建标注' }}</h3>
 
@@ -358,18 +423,42 @@ onUnmounted(() => {
           <div class="field">
             <label>显示位置</label>
             <div class="position-toggle">
-              <button :class="{ active: formPosition === 'above' }" @click="formPosition = 'above'">上方</button>
-              <button :class="{ active: formPosition === 'below' }" @click="formPosition = 'below'">下方</button>
+              <button
+                :class="{ active: formPosition === 'above' }"
+                @click="formPosition = 'above'"
+              >
+                上方
+              </button>
+              <button
+                :class="{ active: formPosition === 'below' }"
+                @click="formPosition = 'below'"
+              >
+                下方
+              </button>
             </div>
           </div>
 
           <div class="actions">
-            <button v-if="editingAnnotation" class="btn-delete" @click="handleDelete">
+            <button
+              v-if="editingAnnotation"
+              class="btn-delete"
+              @click="handleDelete"
+            >
               删除
             </button>
             <div class="right-actions">
-              <button class="btn-cancel" @click="closeEditor">取消</button>
-              <button class="btn-save" @click="handleSave">保存</button>
+              <button
+                class="btn-cancel"
+                @click="closeEditor"
+              >
+                取消
+              </button>
+              <button
+                class="btn-save"
+                @click="handleSave"
+              >
+                保存
+              </button>
             </div>
           </div>
         </div>

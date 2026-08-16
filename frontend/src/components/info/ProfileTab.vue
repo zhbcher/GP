@@ -11,38 +11,81 @@ const holders = computed(() => profile.value?.shareholder_count ?? [])
 
 <template>
   <div class="profile-tab">
-    <div v-if="infoStore.profileLoading" class="loading">加载中...</div>
+    <div
+      v-if="infoStore.profileLoading"
+      class="loading"
+    >
+      加载中...
+    </div>
     <template v-else-if="profile">
-      <section v-if="profile.introduction" class="block">
-        <h4 class="block-title">公司简介</h4>
-        <p class="text-block">{{ profile.introduction }}</p>
+      <section
+        v-if="profile.introduction"
+        class="block"
+      >
+        <h4 class="block-title">
+          公司简介
+        </h4>
+        <p class="text-block">
+          {{ profile.introduction }}
+        </p>
       </section>
 
-      <section v-if="profile.main_business" class="block">
-        <h4 class="block-title">主营业务</h4>
-        <p class="text-block">{{ profile.main_business }}</p>
+      <section
+        v-if="profile.main_business"
+        class="block"
+      >
+        <h4 class="block-title">
+          主营业务
+        </h4>
+        <p class="text-block">
+          {{ profile.main_business }}
+        </p>
       </section>
 
-      <section v-if="structure.length" class="block">
-        <h4 class="block-title">股本结构</h4>
+      <section
+        v-if="structure.length"
+        class="block"
+      >
+        <h4 class="block-title">
+          股本结构
+        </h4>
         <div class="struct-list">
-          <div v-for="(s, i) in structure" :key="i" class="struct-row">
+          <div
+            v-for="(s, i) in structure"
+            :key="i"
+            class="struct-row"
+          >
             <span class="struct-name">{{ s.name || '--' }}</span>
             <div class="struct-bar-wrap">
-              <div class="struct-bar" :style="{ width: formatPct(s.ratio) }"></div>
+              <div
+                class="struct-bar"
+                :style="{ width: formatPct(s.ratio) }"
+              />
             </div>
             <span class="struct-ratio">{{ formatPct(s.ratio) }}</span>
           </div>
         </div>
       </section>
 
-      <section v-if="holders.length" class="block">
-        <h4 class="block-title">股东户数变化</h4>
+      <section
+        v-if="holders.length"
+        class="block"
+      >
+        <h4 class="block-title">
+          股东户数变化
+        </h4>
         <div class="holder-list">
-          <div v-for="(h, i) in holders" :key="i" class="holder-row">
+          <div
+            v-for="(h, i) in holders"
+            :key="i"
+            class="holder-row"
+          >
             <span class="holder-date">{{ h.date || '--' }}</span>
             <span class="holder-count">{{ h.count != null ? h.count.toLocaleString() : '--' }}</span>
-            <span class="holder-change" :class="upDownClass(h.change_pct)">
+            <span
+              class="holder-change"
+              :class="upDownClass(h.change_pct)"
+            >
               {{ formatSignedPct(h.change_pct) }}
             </span>
           </div>
@@ -56,7 +99,12 @@ const holders = computed(() => profile.value?.shareholder_count ?? [])
         暂无数据
       </div>
     </template>
-    <div v-else class="empty">暂无数据</div>
+    <div
+      v-else
+      class="empty"
+    >
+      暂无数据
+    </div>
   </div>
 </template>
 

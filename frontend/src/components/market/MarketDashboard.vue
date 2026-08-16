@@ -26,12 +26,26 @@ onMounted(() => {
   <div class="market-dashboard">
     <header class="dash-header">
       <div class="header-left">
-        <button class="back-btn" @click="emit('back')">← 返回</button>
-        <h2 class="dash-title">市场情绪看板</h2>
+        <button
+          class="back-btn"
+          @click="emit('back')"
+        >
+          ← 返回
+        </button>
+        <h2 class="dash-title">
+          市场情绪看板
+        </h2>
       </div>
       <div class="header-right">
-        <span v-if="marketStore.updatedAt" class="updated">最后更新 {{ marketStore.updatedAt }}</span>
-        <button class="refresh-btn" :disabled="marketStore.loading" @click="marketStore.loadAll()">
+        <span
+          v-if="marketStore.updatedAt"
+          class="updated"
+        >最后更新 {{ marketStore.updatedAt }}</span>
+        <button
+          class="refresh-btn"
+          :disabled="marketStore.loading"
+          @click="marketStore.loadAll()"
+        >
           {{ marketStore.loading ? '刷新中...' : '刷新' }}
         </button>
       </div>
@@ -40,9 +54,14 @@ onMounted(() => {
     <div class="dash-grid">
       <!-- 涨停池 -->
       <section class="card">
-        <h3 class="card-title">涨停池 <span class="count">({{ marketStore.limitUp.length }})</span></h3>
+        <h3 class="card-title">
+          涨停池 <span class="count">({{ marketStore.limitUp.length }})</span>
+        </h3>
         <div class="card-body">
-          <div v-if="marketStore.limitUp.length" class="list">
+          <div
+            v-if="marketStore.limitUp.length"
+            class="list"
+          >
             <div
               v-for="item in marketStore.limitUp"
               :key="item.code"
@@ -52,49 +71,84 @@ onMounted(() => {
               <span class="row-name">
                 {{ item.name }}
                 <span class="row-code">{{ item.code }}</span>
-                <span v-if="item.continuous && item.continuous > 1" class="lianban">{{ item.continuous }}连板</span>
+                <span
+                  v-if="item.continuous && item.continuous > 1"
+                  class="lianban"
+                >{{ item.continuous }}连板</span>
               </span>
-              <span v-if="item.reason" class="row-reason">{{ item.reason }}</span>
+              <span
+                v-if="item.reason"
+                class="row-reason"
+              >{{ item.reason }}</span>
               <span class="row-pct up">{{ formatSignedPct(item.change_pct) }}</span>
             </div>
           </div>
-          <div v-else class="empty">暂无数据</div>
+          <div
+            v-else
+            class="empty"
+          >
+            暂无数据
+          </div>
         </div>
       </section>
 
       <!-- 北向资金 -->
       <section class="card">
-        <h3 class="card-title">北向资金</h3>
+        <h3 class="card-title">
+          北向资金
+        </h3>
         <div class="card-body">
-          <div v-if="marketStore.northFlow" class="north-block">
+          <div
+            v-if="marketStore.northFlow"
+            class="north-block"
+          >
             <div class="north-main">
               <span class="north-label">今日净流入</span>
-              <span class="north-num" :class="upDownClass(northNet)">{{ formatAmount(northNet) }}</span>
+              <span
+                class="north-num"
+                :class="upDownClass(northNet)"
+              >{{ formatAmount(northNet) }}</span>
             </div>
             <div class="north-sub">
               <div class="north-cell">
                 <span class="ns-label">沪股通</span>
-                <span class="ns-num" :class="upDownClass(marketStore.northFlow.hgt)">
+                <span
+                  class="ns-num"
+                  :class="upDownClass(marketStore.northFlow.hgt)"
+                >
                   {{ formatAmount(marketStore.northFlow.hgt) }}
                 </span>
               </div>
               <div class="north-cell">
                 <span class="ns-label">深股通</span>
-                <span class="ns-num" :class="upDownClass(marketStore.northFlow.sgt)">
+                <span
+                  class="ns-num"
+                  :class="upDownClass(marketStore.northFlow.sgt)"
+                >
                   {{ formatAmount(marketStore.northFlow.sgt) }}
                 </span>
               </div>
             </div>
           </div>
-          <div v-else class="empty">暂无数据</div>
+          <div
+            v-else
+            class="empty"
+          >
+            暂无数据
+          </div>
         </div>
       </section>
 
       <!-- 龙虎榜 -->
       <section class="card">
-        <h3 class="card-title">龙虎榜 <span class="count">({{ marketStore.dragonTiger.length }})</span></h3>
+        <h3 class="card-title">
+          龙虎榜 <span class="count">({{ marketStore.dragonTiger.length }})</span>
+        </h3>
         <div class="card-body">
-          <div v-if="marketStore.dragonTiger.length" class="list">
+          <div
+            v-if="marketStore.dragonTiger.length"
+            class="list"
+          >
             <div
               v-for="item in marketStore.dragonTiger"
               :key="item.code"
@@ -105,37 +159,73 @@ onMounted(() => {
                 {{ item.name }}
                 <span class="row-code">{{ item.code }}</span>
               </span>
-              <span v-if="item.reason" class="row-reason">{{ item.reason }}</span>
-              <span class="row-pct" :class="upDownClass(item.net_buy)">净{{ formatAmount(item.net_buy) }}</span>
+              <span
+                v-if="item.reason"
+                class="row-reason"
+              >{{ item.reason }}</span>
+              <span
+                class="row-pct"
+                :class="upDownClass(item.net_buy)"
+              >净{{ formatAmount(item.net_buy) }}</span>
             </div>
           </div>
-          <div v-else class="empty">暂无数据</div>
+          <div
+            v-else
+            class="empty"
+          >
+            暂无数据
+          </div>
         </div>
       </section>
 
       <!-- 板块排行 -->
       <section class="card">
-        <h3 class="card-title">板块排行</h3>
+        <h3 class="card-title">
+          板块排行
+        </h3>
         <div class="card-body">
-          <div v-if="marketStore.sectors.length" class="list">
-            <div v-for="(item, i) in marketStore.sectors" :key="item.name" class="list-row">
+          <div
+            v-if="marketStore.sectors.length"
+            class="list"
+          >
+            <div
+              v-for="(item, i) in marketStore.sectors"
+              :key="item.name"
+              class="list-row"
+            >
               <span class="rank-num">{{ i + 1 }}</span>
               <span class="row-name">{{ item.name }}</span>
-              <span v-if="item.lead_stock" class="row-reason">领涨 {{ item.lead_stock }}</span>
-              <span class="row-pct" :class="upDownClass(item.change_pct)">
+              <span
+                v-if="item.lead_stock"
+                class="row-reason"
+              >领涨 {{ item.lead_stock }}</span>
+              <span
+                class="row-pct"
+                :class="upDownClass(item.change_pct)"
+              >
                 {{ formatSignedPct(item.change_pct) }}
               </span>
             </div>
           </div>
-          <div v-else class="empty">暂无数据</div>
+          <div
+            v-else
+            class="empty"
+          >
+            暂无数据
+          </div>
         </div>
       </section>
 
       <!-- 热度榜 -->
       <section class="card">
-        <h3 class="card-title">热度榜</h3>
+        <h3 class="card-title">
+          热度榜
+        </h3>
         <div class="card-body">
-          <div v-if="marketStore.hotRank.length" class="list">
+          <div
+            v-if="marketStore.hotRank.length"
+            class="list"
+          >
             <div
               v-for="item in marketStore.hotRank"
               :key="item.code"
@@ -147,12 +237,20 @@ onMounted(() => {
                 {{ item.name }}
                 <span class="row-code">{{ item.code }}</span>
               </span>
-              <span class="row-pct" :class="upDownClass(item.change_pct)">
+              <span
+                class="row-pct"
+                :class="upDownClass(item.change_pct)"
+              >
                 {{ formatSignedPct(item.change_pct) }}
               </span>
             </div>
           </div>
-          <div v-else class="empty">暂无数据</div>
+          <div
+            v-else
+            class="empty"
+          >
+            暂无数据
+          </div>
         </div>
       </section>
     </div>

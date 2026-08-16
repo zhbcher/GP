@@ -61,15 +61,18 @@ const annTypeLabels: Record<string, string> = {
 </script>
 
 <template>
-  <div class="journal-panel" @keydown="onKeydown">
+  <div
+    class="journal-panel"
+    @keydown="onKeydown"
+  >
     <!-- Top: date + mood -->
     <div class="jp-header">
       <input
-        type="date"
         v-model="selectedDate"
-        @change="onSelectDate"
+        type="date"
         class="jp-date-input"
-      />
+        @change="onSelectDate"
+      >
       <div class="jp-mood-group">
         <button
           v-for="opt in moodOptions"
@@ -92,7 +95,7 @@ const annTypeLabels: Record<string, string> = {
             class="jp-textarea"
             rows="4"
             placeholder="记录今日买卖操作..."
-          ></textarea>
+          />
         </div>
         <div class="jp-field">
           <label class="jp-label">市场观察</label>
@@ -101,7 +104,7 @@ const annTypeLabels: Record<string, string> = {
             class="jp-textarea"
             rows="4"
             placeholder="大盘走势、板块轮动、资金流向..."
-          ></textarea>
+          />
         </div>
         <div class="jp-field">
           <label class="jp-label">明日计划</label>
@@ -110,14 +113,14 @@ const annTypeLabels: Record<string, string> = {
             class="jp-textarea"
             rows="4"
             placeholder="明日交易计划..."
-          ></textarea>
+          />
         </div>
 
         <div class="jp-actions">
           <button
             class="jp-save-btn"
-            @click="onSave"
             :disabled="store.saving"
+            @click="onSave"
           >
             {{ store.saving ? '保存中...' : '保存 (Ctrl+S)' }}
           </button>
@@ -125,10 +128,24 @@ const annTypeLabels: Record<string, string> = {
 
         <!-- Annotations summary -->
         <div class="jp-annotations">
-          <div class="jp-section-title">当日标注 ({{ store.annotations.length }})</div>
-          <div v-if="store.annotations.length === 0" class="jp-empty">无标注</div>
-          <div v-else class="jp-ann-list">
-            <div v-for="a in store.annotations" :key="a.id" class="jp-ann-item">
+          <div class="jp-section-title">
+            当日标注 ({{ store.annotations.length }})
+          </div>
+          <div
+            v-if="store.annotations.length === 0"
+            class="jp-empty"
+          >
+            无标注
+          </div>
+          <div
+            v-else
+            class="jp-ann-list"
+          >
+            <div
+              v-for="a in store.annotations"
+              :key="a.id"
+              class="jp-ann-item"
+            >
               <span class="jp-ann-code">{{ a.stock_code }}</span>
               <span :class="['jp-ann-type', `ann-${a.type}`]">{{ annTypeLabels[a.type] || a.type }}</span>
               <span class="jp-ann-content">{{ a.content }}</span>
@@ -138,8 +155,13 @@ const annTypeLabels: Record<string, string> = {
       </div>
 
       <!-- Sidebar: recent journals -->
-      <div class="jp-sidebar" v-if="showRecent">
-        <div class="jp-section-title">最近日志</div>
+      <div
+        v-if="showRecent"
+        class="jp-sidebar"
+      >
+        <div class="jp-section-title">
+          最近日志
+        </div>
         <div class="jp-recent-list">
           <div
             v-for="r in store.recent"
@@ -149,9 +171,16 @@ const annTypeLabels: Record<string, string> = {
           >
             <span class="jp-recent-date">{{ r.trade_date }}</span>
             <span class="jp-recent-mood">{{ r.mood === 'optimistic' ? '😊' : r.mood === 'pessimistic' ? '😟' : '😐' }}</span>
-            <div class="jp-recent-summary">{{ r.summary }}</div>
+            <div class="jp-recent-summary">
+              {{ r.summary }}
+            </div>
           </div>
-          <div v-if="store.recent.length === 0" class="jp-empty">暂无日志</div>
+          <div
+            v-if="store.recent.length === 0"
+            class="jp-empty"
+          >
+            暂无日志
+          </div>
         </div>
       </div>
     </div>

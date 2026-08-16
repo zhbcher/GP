@@ -349,3 +349,27 @@ export const newsApi = {
     return api.post('/news/refresh').then(r => r.data)
   },
 }
+// ── 选股 v2 信号 ──────────────────────────────────────────────
+export interface ScreenV2Signal {
+  stock_code: string
+  close: number
+  score: number
+  factors: Record<string, number | null>
+}
+export interface ScreenV2Response {
+  ok: boolean
+  file?: string
+  date?: string
+  market_regime?: string
+  market_ret_60d?: number
+  suggested_position?: number
+  top_ratio?: number
+  n_candidates?: number
+  signals?: ScreenV2Signal[]
+  message?: string
+}
+export const screenV2Api = {
+  latest(): Promise<ScreenV2Response> {
+    return api.get('/screen-v2/latest').then(r => r.data)
+  },
+}

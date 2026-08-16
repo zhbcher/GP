@@ -337,7 +337,7 @@ function renderOverlay() {
   }
   const fmt = (ts: number) => {
     const d = new Date(ts)
-    return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
   }
   const xTicks: { x: number; label: string }[] = []
   for (let k = 0; k <= 4; k++) {
@@ -366,7 +366,7 @@ const hoverInfo = computed(() => {
   const i = hoverIdx.value
   if (i === null || overlaySeries.value.length === 0) return null
   const d = new Date(overlaySeries.value[0].ts[i])
-  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
   return {
     date: dateStr,
     x: 48 + (i / Math.max(1, overlaySeries.value[0].ts.length - 1)) * (overlayRender.value.w - 60),
@@ -406,7 +406,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="compare-view" ref="rootRef">
+  <div
+    ref="rootRef"
+    class="compare-view"
+  >
     <!-- Top bar: stock selector + period + exit -->
     <div class="compare-topbar">
       <div class="stock-selector">
@@ -436,57 +439,167 @@ onUnmounted(() => {
       </div>
 
       <div class="mode-selector">
-        <button :class="['period-btn', { active: viewMode === 'grid' }]" @click="switchMode('grid')">并列</button>
-        <button :class="['period-btn', { active: viewMode === 'overlay' }]" @click="switchMode('overlay')">叠加</button>
+        <button
+          :class="['period-btn', { active: viewMode === 'grid' }]"
+          @click="switchMode('grid')"
+        >
+          并列
+        </button>
+        <button
+          :class="['period-btn', { active: viewMode === 'overlay' }]"
+          @click="switchMode('overlay')"
+        >
+          叠加
+        </button>
       </div>
 
-      <button class="exit-btn" @click="emit('exit')">退出对比</button>
+      <button
+        class="exit-btn"
+        @click="emit('exit')"
+      >
+        退出对比
+      </button>
     </div>
 
     <!-- Chart area -->
-    <div class="compare-charts" v-if="viewMode === 'grid'">
-      <div v-if="loading" class="loading-overlay">加载中...</div>
-      <div v-if="error" class="error-overlay">{{ error }}</div>
+    <div
+      v-if="viewMode === 'grid'"
+      class="compare-charts"
+    >
+      <div
+        v-if="loading"
+        class="loading-overlay"
+      >
+        加载中...
+      </div>
+      <div
+        v-if="error"
+        class="error-overlay"
+      >
+        {{ error }}
+      </div>
 
       <div
         v-for="stock in selectedStocks"
         :key="stock.code"
         class="compare-chart-item"
       >
-        <div class="chart-label">{{ stock.name }} ({{ stock.code }}) · {{ periodLabel }}</div>
-        <div class="compare-chart-container"></div>
+        <div class="chart-label">
+          {{ stock.name }} ({{ stock.code }}) · {{ periodLabel }}
+        </div>
+        <div class="compare-chart-container" />
       </div>
     </div>
 
     <!-- G1: 归一化叠加对比 -->
-    <div class="overlay-wrap" v-else>
-      <div v-if="overlayLoading" class="loading-overlay">加载中...</div>
+    <div
+      v-else
+      class="overlay-wrap"
+    >
+      <div
+        v-if="overlayLoading"
+        class="loading-overlay"
+      >
+        加载中...
+      </div>
       <div class="overlay-legend">
-        <span v-for="sr in overlaySeries" :key="sr.code" class="legend-item">
-          <i class="legend-dot" :style="{ background: sr.color }"></i>
+        <span
+          v-for="sr in overlaySeries"
+          :key="sr.code"
+          class="legend-item"
+        >
+          <i
+            class="legend-dot"
+            :style="{ background: sr.color }"
+          />
           {{ sr.name }} <b :style="{ color: sr.color }">{{ sr.pct[sr.pct.length - 1] >= 0 ? '+' : '' }}{{ sr.pct[sr.pct.length - 1]?.toFixed(2) }}%</b>
         </span>
         <span class="legend-hint">（区间涨跌幅，以共同起点归一化）</span>
       </div>
-      <div class="overlay-canvas" ref="overlayCanvasRef" @mousemove="onOverlayMove" @mouseleave="hoverIdx = null">
-        <svg :width="overlayRender.w" :height="overlayRender.h">
-          <line v-for="(t, i) in overlayRender.yTicks" :key="'y' + i"
-            :x1="48" :x2="overlayRender.w - 12" :y1="t.y" :y2="t.y" stroke="#2e313a" stroke-width="1" />
-          <text v-for="(t, i) in overlayRender.yTicks" :key="'yt' + i"
-            :x="42" :y="t.y + 3" text-anchor="end" fill="#6b7280" font-size="10">{{ t.label }}</text>
-          <text v-for="(t, i) in overlayRender.xTicks" :key="'x' + i"
-            :x="t.x" :y="overlayRender.h - 6" text-anchor="middle" fill="#6b7280" font-size="10">{{ t.label }}</text>
-          <line v-if="overlayRender.zeroY !== null"
-            :x1="48" :x2="overlayRender.w - 12" :y1="overlayRender.zeroY" :y2="overlayRender.zeroY"
-            stroke="#6b7280" stroke-dasharray="3,3" stroke-width="1" />
-          <path v-for="(p, i) in overlayRender.paths" :key="'p' + i" :d="p.d" :stroke="p.color" fill="none" stroke-width="1.6" />
-          <line v-if="hoverInfo" :x1="hoverInfo.x" :x2="hoverInfo.x" :y1="12" :y2="overlayRender.h - 22"
-            stroke="#4b5563" stroke-dasharray="2,2" stroke-width="1" />
+      <div
+        ref="overlayCanvasRef"
+        class="overlay-canvas"
+        @mousemove="onOverlayMove"
+        @mouseleave="hoverIdx = null"
+      >
+        <svg
+          :width="overlayRender.w"
+          :height="overlayRender.h"
+        >
+          <line
+            v-for="(t, i) in overlayRender.yTicks"
+            :key="'y' + i"
+            :x1="48"
+            :x2="overlayRender.w - 12"
+            :y1="t.y"
+            :y2="t.y"
+            stroke="#2e313a"
+            stroke-width="1"
+          />
+          <text
+            v-for="(t, i) in overlayRender.yTicks"
+            :key="'yt' + i"
+            :x="42"
+            :y="t.y + 3"
+            text-anchor="end"
+            fill="#6b7280"
+            font-size="10"
+          >{{ t.label }}</text>
+          <text
+            v-for="(t, i) in overlayRender.xTicks"
+            :key="'x' + i"
+            :x="t.x"
+            :y="overlayRender.h - 6"
+            text-anchor="middle"
+            fill="#6b7280"
+            font-size="10"
+          >{{ t.label }}</text>
+          <line
+            v-if="overlayRender.zeroY !== null"
+            :x1="48"
+            :x2="overlayRender.w - 12"
+            :y1="overlayRender.zeroY"
+            :y2="overlayRender.zeroY"
+            stroke="#6b7280"
+            stroke-dasharray="3,3"
+            stroke-width="1"
+          />
+          <path
+            v-for="(p, i) in overlayRender.paths"
+            :key="'p' + i"
+            :d="p.d"
+            :stroke="p.color"
+            fill="none"
+            stroke-width="1.6"
+          />
+          <line
+            v-if="hoverInfo"
+            :x1="hoverInfo.x"
+            :x2="hoverInfo.x"
+            :y1="12"
+            :y2="overlayRender.h - 22"
+            stroke="#4b5563"
+            stroke-dasharray="2,2"
+            stroke-width="1"
+          />
         </svg>
-        <div v-if="hoverInfo" class="hover-tooltip" :style="{ left: Math.min(hoverInfo.x + 10, overlayRender.w - 150) + 'px' }">
-          <div class="tt-date">{{ hoverInfo.date }}</div>
-          <div v-for="it in hoverInfo.items" :key="it.name" class="tt-row">
-            <i class="legend-dot" :style="{ background: it.color }"></i>{{ it.name }}
+        <div
+          v-if="hoverInfo"
+          class="hover-tooltip"
+          :style="{ left: Math.min(hoverInfo.x + 10, overlayRender.w - 150) + 'px' }"
+        >
+          <div class="tt-date">
+            {{ hoverInfo.date }}
+          </div>
+          <div
+            v-for="it in hoverInfo.items"
+            :key="it.name"
+            class="tt-row"
+          >
+            <i
+              class="legend-dot"
+              :style="{ background: it.color }"
+            />{{ it.name }}
             <b>{{ it.pct >= 0 ? '+' : '' }}{{ it.pct.toFixed(2) }}%</b>
           </div>
         </div>

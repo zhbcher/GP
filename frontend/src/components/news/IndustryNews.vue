@@ -160,10 +160,19 @@ onMounted(loadSectors)
 <template>
   <div class="news-overlay">
     <div class="news-header">
-      <button class="back-btn" @click="emit('back')">← 返回</button>
+      <button
+        class="back-btn"
+        @click="emit('back')"
+      >
+        ← 返回
+      </button>
       <h2>行业资讯</h2>
       <div class="header-right">
-        <button class="refresh-btn" :disabled="refreshing" @click="refresh">
+        <button
+          class="refresh-btn"
+          :disabled="refreshing"
+          @click="refresh"
+        >
           {{ refreshing ? '抓取中...' : '⟳ 刷新' }}
         </button>
       </div>
@@ -178,7 +187,10 @@ onMounted(loadSectors)
           :class="['sector-btn', { active: activeSector === s.sector }]"
           @click="selectSector(s.sector)"
         >
-          <span class="sector-dot" :style="{ background: sectorColor(s.sector) }"></span>
+          <span
+            class="sector-dot"
+            :style="{ background: sectorColor(s.sector) }"
+          />
           <span class="sector-label">{{ SECTOR_NAMES[s.sector] || s.sector }}</span>
           <span class="sector-count">{{ s.count }}</span>
         </button>
@@ -186,8 +198,18 @@ onMounted(loadSectors)
 
       <!-- Right: content -->
       <div class="content-area">
-        <div v-if="loading || dayLoading" class="empty">加载中...</div>
-        <div v-else-if="error" class="empty">{{ error }}</div>
+        <div
+          v-if="loading || dayLoading"
+          class="empty"
+        >
+          加载中...
+        </div>
+        <div
+          v-else-if="error"
+          class="empty"
+        >
+          {{ error }}
+        </div>
         <template v-else>
           <!-- Date tabs -->
           <div class="date-tabs">
@@ -203,15 +225,28 @@ onMounted(loadSectors)
           </div>
 
           <!-- Digest -->
-          <div v-if="digest.length" class="digest-box">
-            <div class="digest-title">📌 {{ activeSectorName }} · {{ fmtDayLabel(activeDate) }}要点</div>
+          <div
+            v-if="digest.length"
+            class="digest-box"
+          >
+            <div class="digest-title">
+              📌 {{ activeSectorName }} · {{ fmtDayLabel(activeDate) }}要点
+            </div>
             <ol class="digest-list">
-              <li v-for="(p, i) in digest" :key="i">{{ p }}</li>
+              <li
+                v-for="(p, i) in digest"
+                :key="i"
+              >
+                {{ p }}
+              </li>
             </ol>
           </div>
 
           <!-- News list -->
-          <div v-if="items.length" class="news-list">
+          <div
+            v-if="items.length"
+            class="news-list"
+          >
             <div
               v-for="item in items"
               :key="item.id || item.title"
@@ -222,9 +257,14 @@ onMounted(loadSectors)
                 <span class="card-source">{{ item.source }}</span>
                 <span class="card-time">{{ fmtTime(item.date) }}</span>
               </div>
-              <div class="card-title">{{ displayTitle(item) }}</div>
+              <div class="card-title">
+                {{ displayTitle(item) }}
+              </div>
 
-              <div v-if="expandedId === item.id" class="card-content">
+              <div
+                v-if="expandedId === item.id"
+                class="card-content"
+              >
                 <p>{{ displayContent(item) }}</p>
                 <a
                   v-if="item.link"
@@ -234,10 +274,20 @@ onMounted(loadSectors)
                   @click.stop
                 >🔗 原文链接</a>
               </div>
-              <div v-else-if="item.content || item.content_zh" class="card-hint">点击展开全文</div>
+              <div
+                v-else-if="item.content || item.content_zh"
+                class="card-hint"
+              >
+                点击展开全文
+              </div>
             </div>
           </div>
-          <div v-else class="empty">当日暂无资讯</div>
+          <div
+            v-else
+            class="empty"
+          >
+            当日暂无资讯
+          </div>
         </template>
       </div>
     </div>

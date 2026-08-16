@@ -322,15 +322,27 @@ onUnmounted(() => {
 
     <div class="toolbar-divider">
       <span class="divider-label">工具</span>
-      <button class="tool-btn" @click="exportScreenshot" title="截图导出PNG">
+      <button
+        class="tool-btn"
+        title="截图导出PNG"
+        @click="exportScreenshot"
+      >
         <span class="tool-icon">📷</span>
         <span class="tool-label">截图</span>
       </button>
-      <button class="tool-btn" @click="exportData" title="导出画线+标注JSON">
+      <button
+        class="tool-btn"
+        title="导出画线+标注JSON"
+        @click="exportData"
+      >
         <span class="tool-icon">📤</span>
         <span class="tool-label">导出</span>
       </button>
-      <button class="tool-btn" @click="triggerImport" title="导入画线+标注JSON">
+      <button
+        class="tool-btn"
+        title="导入画线+标注JSON"
+        @click="triggerImport"
+      >
         <span class="tool-icon">📥</span>
         <span class="tool-label">导入</span>
       </button>
@@ -340,43 +352,43 @@ onUnmounted(() => {
         accept=".json"
         style="display: none"
         @change="handleImportFile"
-      />
+      >
       <button
         :class="['tool-btn', { active: rangeMode }]"
-        @click="toggleRangeMode"
         title="区间统计：点击起始K线，再点击结束K线"
+        @click="toggleRangeMode"
       >
         <span class="tool-icon">📊</span>
         <span class="tool-label">{{ rangeMode ? (rangeStart ? '点终点' : '点起点') : '区间' }}</span>
       </button>
       <button
         :class="['tool-btn', { active: compareMode }]"
-        @click="toggleCompareMode"
         title="多股对比：输入股票代码叠加走势"
+        @click="toggleCompareMode"
       >
         <span class="tool-icon">🔀</span>
         <span class="tool-label">对比</span>
       </button>
       <button
         class="tool-btn"
-        @click="$emit('open-compare')"
         title="同屏对比：多只股票并排显示"
+        @click="$emit('open-compare')"
       >
         <span class="tool-icon">🗗</span>
         <span class="tool-label">同屏</span>
       </button>
       <button
         :class="['tool-btn', { active: showChips }]"
-        @click="toggleChips"
         title="筹码分布"
+        @click="toggleChips"
       >
         <span class="tool-icon">🎯</span>
         <span class="tool-label">筹码</span>
       </button>
       <button
         :class="['tool-btn', { active: predictStore.visible }]"
-        @click="predictStore.toggle()"
         title="预测"
+        @click="predictStore.toggle()"
       >
         <span class="tool-icon">📊</span>
         <span class="tool-label">预测</span>
@@ -384,8 +396,8 @@ onUnmounted(() => {
       <button
         class="tool-btn"
         :disabled="!canUndo"
-        @click="undo"
         title="撤销 (Ctrl+Z)"
+        @click="undo"
       >
         <span class="tool-icon">↩️</span>
         <span class="tool-label">撤销</span>
@@ -396,8 +408,8 @@ onUnmounted(() => {
       <span class="divider-label">标注</span>
       <button
         :class="['tool-btn', { active: annotationStore.mode === 'placing' }]"
-        @click="toggleAnnotationMode"
         title="标注"
+        @click="toggleAnnotationMode"
       >
         <span class="tool-icon">📝</span>
         <span class="tool-label">标注</span>
@@ -409,8 +421,8 @@ onUnmounted(() => {
           :key="type"
           :class="['filter-btn', { active: annotationStore.visibility[type as AnnotationType] }]"
           :style="{ borderColor: color, color }"
-          @click="annotationStore.toggleVisibility(type as AnnotationType)"
           :title="`${ANNOTATION_LABELS[type as AnnotationType]} (${annotationStore.visibility[type as AnnotationType] ? '显示' : '隐藏'})`"
+          @click="annotationStore.toggleVisibility(type as AnnotationType)"
         >
           {{ ANNOTATION_LABELS[type as AnnotationType] }}
         </button>
@@ -420,34 +432,70 @@ onUnmounted(() => {
 
   <!-- ADV-001: Compare stock input -->
   <Teleport to="body">
-    <div v-if="compareMode" class="compare-popup">
+    <div
+      v-if="compareMode"
+      class="compare-popup"
+    >
       <div class="compare-header">
         <span>输入对比股票代码</span>
-        <button class="range-close" @click="compareMode = false">×</button>
+        <button
+          class="range-close"
+          @click="compareMode = false"
+        >
+          ×
+        </button>
       </div>
       <input
         v-model="compareCode"
         placeholder="例如: sz000858"
         @keyup.enter="addCompareStock"
-      />
-      <button class="save-btn" @click="addCompareStock">叠加</button>
+      >
+      <button
+        class="save-btn"
+        @click="addCompareStock"
+      >
+        叠加
+      </button>
     </div>
   </Teleport>
 
   <!-- FE-008: Range statistics popup -->
   <Teleport to="body">
-    <div v-if="rangeStats" class="range-popup">
+    <div
+      v-if="rangeStats"
+      class="range-popup"
+    >
       <div class="range-header">
         <span>区间统计 {{ rangeStats.startDate }} ~ {{ rangeStats.endDate }}</span>
-        <button class="range-close" @click="rangeStats = null">×</button>
+        <button
+          class="range-close"
+          @click="rangeStats = null"
+        >
+          ×
+        </button>
       </div>
       <div class="range-grid">
-        <div class="range-item"><span class="range-label">K线数</span><span class="range-value">{{ rangeStats.bars }}</span></div>
-        <div class="range-item"><span class="range-label">涨跌幅</span><span class="range-value" :class="Number(rangeStats.changePct) >= 0 ? 'text-up' : 'text-down'">{{ rangeStats.changePct }}%</span></div>
-        <div class="range-item"><span class="range-label">最高</span><span class="range-value">{{ rangeStats.maxHigh }}</span></div>
-        <div class="range-item"><span class="range-label">最低</span><span class="range-value">{{ rangeStats.minLow }}</span></div>
-        <div class="range-item"><span class="range-label">振幅</span><span class="range-value">{{ rangeStats.amplitude }}%</span></div>
-        <div class="range-item"><span class="range-label">总成交量</span><span class="range-value">{{ rangeStats.totalVol }}</span></div>
+        <div class="range-item">
+          <span class="range-label">K线数</span><span class="range-value">{{ rangeStats.bars }}</span>
+        </div>
+        <div class="range-item">
+          <span class="range-label">涨跌幅</span><span
+            class="range-value"
+            :class="Number(rangeStats.changePct) >= 0 ? 'text-up' : 'text-down'"
+          >{{ rangeStats.changePct }}%</span>
+        </div>
+        <div class="range-item">
+          <span class="range-label">最高</span><span class="range-value">{{ rangeStats.maxHigh }}</span>
+        </div>
+        <div class="range-item">
+          <span class="range-label">最低</span><span class="range-value">{{ rangeStats.minLow }}</span>
+        </div>
+        <div class="range-item">
+          <span class="range-label">振幅</span><span class="range-value">{{ rangeStats.amplitude }}%</span>
+        </div>
+        <div class="range-item">
+          <span class="range-label">总成交量</span><span class="range-value">{{ rangeStats.totalVol }}</span>
+        </div>
       </div>
     </div>
   </Teleport>

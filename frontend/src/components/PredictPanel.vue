@@ -119,31 +119,65 @@ const trendClass = computed(() => {
     <div class="panel-header">
       <h3>预测分析</h3>
       <div class="header-actions">
-        <select v-model="days" class="days-select">
-          <option :value="5">5 天</option>
-          <option :value="10">10 天</option>
-          <option :value="20">20 天</option>
+        <select
+          v-model="days"
+          class="days-select"
+        >
+          <option :value="5">
+            5 天
+          </option>
+          <option :value="10">
+            10 天
+          </option>
+          <option :value="20">
+            20 天
+          </option>
         </select>
-        <button class="refresh-btn" :disabled="predictStore.loading" @click="refresh">
+        <button
+          class="refresh-btn"
+          :disabled="predictStore.loading"
+          @click="refresh"
+        >
           {{ predictStore.loading ? '分析中...' : '刷新' }}
         </button>
       </div>
     </div>
 
-    <div v-if="predictStore.loading" class="loading">分析中，请稍候...</div>
-    <div v-else-if="predictStore.error" class="error">{{ predictStore.error }}</div>
-    <div v-else-if="ensemble" class="predict-content">
+    <div
+      v-if="predictStore.loading"
+      class="loading"
+    >
+      分析中，请稍候...
+    </div>
+    <div
+      v-else-if="predictStore.error"
+      class="error"
+    >
+      {{ predictStore.error }}
+    </div>
+    <div
+      v-else-if="ensemble"
+      class="predict-content"
+    >
       <!-- 综合趋势 -->
       <div class="ensemble-card">
-        <div class="ensemble-icon">{{ trendEmoji }}</div>
+        <div class="ensemble-icon">
+          {{ trendEmoji }}
+        </div>
         <div class="ensemble-info">
           <div class="ensemble-trend">
             综合趋势: <strong :class="'text-' + trendClass">{{ trendLabel }}</strong>
             <span class="confidence">{{ (ensemble.weighted_confidence * 100).toFixed(0) }}%</span>
           </div>
-          <div v-if="ensemble.target_price" class="ensemble-price">
+          <div
+            v-if="ensemble.target_price"
+            class="ensemble-price"
+          >
             目标价: {{ ensemble.target_price }}
-            <span v-if="ensemble.score !== undefined" class="ensemble-score">（得分 {{ ensemble.score > 0 ? '+' : '' }}{{ ensemble.score.toFixed(2) }}）</span>
+            <span
+              v-if="ensemble.score !== undefined"
+              class="ensemble-score"
+            >（得分 {{ ensemble.score > 0 ? '+' : '' }}{{ ensemble.score.toFixed(2) }}）</span>
           </div>
         </div>
       </div>
@@ -151,7 +185,11 @@ const trendClass = computed(() => {
       <!-- 各模型投票（加权） -->
       <div class="model-votes">
         <h4>模型投票（权重来自回测准确率）</h4>
-        <div v-for="item in voteRows" :key="item.name" class="vote-item">
+        <div
+          v-for="item in voteRows"
+          :key="item.name"
+          class="vote-item"
+        >
           <span class="vote-label">{{ item.label }}</span>
           <span :class="['vote-trend', 'text-' + item.trendClass]">{{ item.trendText }}</span>
           <span class="vote-confidence">{{ (item.confidence * 100).toFixed(0) }}%</span>
@@ -162,28 +200,52 @@ const trendClass = computed(() => {
       <!-- 回测准确率（walk-forward 历史验证） -->
       <div class="accuracy-section">
         <h4>模型准确率（历史回测 / 近{{ days }}日方向）</h4>
-        <div v-if="Object.keys(backtest).length === 0" class="accuracy-empty">暂无回测数据</div>
+        <div
+          v-if="Object.keys(backtest).length === 0"
+          class="accuracy-empty"
+        >
+          暂无回测数据
+        </div>
         <template v-else>
-          <div v-for="(stat, model) in (backtest[String(days)] || {})" :key="model" class="accuracy-item">
+          <div
+            v-for="(stat, model) in (backtest[String(days)] || {})"
+            :key="model"
+            class="accuracy-item"
+          >
             <span class="accuracy-label">{{ MODEL_LABELS[model] || model }}</span>
-            <span class="accuracy-value" :class="{ good: stat.accuracy >= 0.53, bad: stat.accuracy < 0.50 }">{{ (stat.accuracy * 100).toFixed(1) }}%</span>
+            <span
+              class="accuracy-value"
+              :class="{ good: stat.accuracy >= 0.53, bad: stat.accuracy < 0.50 }"
+            >{{ (stat.accuracy * 100).toFixed(1) }}%</span>
             <span class="accuracy-samples">{{ stat.total }} 样本</span>
           </div>
-          <div class="accuracy-note">权重按回测准确率分配；&lt;50% 的模型已被压权</div>
+          <div class="accuracy-note">
+            权重按回测准确率分配；&lt;50% 的模型已被压权
+          </div>
         </template>
       </div>
 
       <!-- 形态识别 -->
-      <div v-if="predictStore.result?.models?.patterns?.patterns?.length" class="patterns-section">
+      <div
+        v-if="predictStore.result?.models?.patterns?.patterns?.length"
+        class="patterns-section"
+      >
         <h4>形态识别</h4>
-        <div v-for="p in predictStore.result.models.patterns.patterns" :key="p.type" class="pattern-item">
+        <div
+          v-for="p in predictStore.result.models.patterns.patterns"
+          :key="p.type"
+          class="pattern-item"
+        >
           <span class="pattern-type">{{ p.label || p.type }}</span>
           <span class="pattern-confidence">{{ (p.confidence * 100).toFixed(0) }}%</span>
         </div>
       </div>
 
       <!-- 支撑/阻力 -->
-      <div v-if="predictStore.result?.models?.patterns?.support?.length" class="levels-section">
+      <div
+        v-if="predictStore.result?.models?.patterns?.support?.length"
+        class="levels-section"
+      >
         <h4>关键价位</h4>
         <div class="level-row">
           <span class="level-label">阻力位</span>
@@ -198,21 +260,47 @@ const trendClass = computed(() => {
       <!-- LLM 分析报告 -->
       <div class="llm-section">
         <h4>AI 分析报告</h4>
-        <div v-if="llmLoading" class="loading">AI 分析生成中（约 10-30 秒）...</div>
+        <div
+          v-if="llmLoading"
+          class="loading"
+        >
+          AI 分析生成中（约 10-30 秒）...
+        </div>
         <template v-else-if="predictStore.result?.llm">
-          <div v-if="predictStore.result.llm.status === 'ok'" class="llm-report">
-            <p class="llm-summary">{{ predictStore.result.llm.summary }}</p>
-            <p class="llm-suggestion">💡 {{ predictStore.result.llm.suggestion }}</p>
-            <p class="llm-risk">⚠️ 风险: {{ predictStore.result.llm.risk }}</p>
+          <div
+            v-if="predictStore.result.llm.status === 'ok'"
+            class="llm-report"
+          >
+            <p class="llm-summary">
+              {{ predictStore.result.llm.summary }}
+            </p>
+            <p class="llm-suggestion">
+              💡 {{ predictStore.result.llm.suggestion }}
+            </p>
+            <p class="llm-risk">
+              ⚠️ 风险: {{ predictStore.result.llm.risk }}
+            </p>
           </div>
-          <div v-else class="llm-error">
+          <div
+            v-else
+            class="llm-error"
+          >
             {{ predictStore.result.llm.status === 'not_configured' ? '未配置 LLM API' : '生成失败: ' + (predictStore.result.llm.error || predictStore.result.llm.status) }}
           </div>
         </template>
-        <button v-else class="llm-btn" @click="generateLlm">✨ 生成 AI 分析报告</button>
+        <button
+          v-else
+          class="llm-btn"
+          @click="generateLlm"
+        >
+          ✨ 生成 AI 分析报告
+        </button>
       </div>
     </div>
-    <div v-else class="empty">
+    <div
+      v-else
+      class="empty"
+    >
       点击"预测"按钮或切换股票开始分析
     </div>
   </div>

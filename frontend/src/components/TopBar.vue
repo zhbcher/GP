@@ -118,11 +118,20 @@ function triggerRestore() {
             v-model="searchQuery"
             placeholder="搜索股票代码/名称..."
             @keydown.enter="onSearch"
-          />
-          <button class="search-btn" @click="onSearch" title="搜索">🔍</button>
+          >
+          <button
+            class="search-btn"
+            title="搜索"
+            @click="onSearch"
+          >
+            🔍
+          </button>
         </div>
         <Transition name="fade">
-          <div v-if="showSearch && searchResults.length > 0" class="search-dropdown">
+          <div
+            v-if="showSearch && searchResults.length > 0"
+            class="search-dropdown"
+          >
             <div
               v-for="item in searchResults"
               :key="item.code"
@@ -133,9 +142,11 @@ function triggerRestore() {
               <span class="search-name">{{ item.name }}</span>
               <button 
                 class="add-watchlist-btn" 
-                @mousedown.prevent.stop="addToWatchlist(item)" 
-                :title="'加入自选'"
-              >+</button>
+                :title="'加入自选'" 
+                @mousedown.prevent.stop="addToWatchlist(item)"
+              >
+                +
+              </button>
             </div>
           </div>
         </Transition>
@@ -160,7 +171,10 @@ function triggerRestore() {
     </div>
 
     <div class="right-section">
-      <div v-if="!['timeline', 'minute', '5min', '15min', '30min', '60min'].includes(stockStore.period)" class="adjust-tabs">
+      <div
+        v-if="!['timeline', 'minute', '5min', '15min', '30min', '60min'].includes(stockStore.period)"
+        class="adjust-tabs"
+      >
         <button
           v-for="a in adjusts"
           :key="a.key"
@@ -172,31 +186,50 @@ function triggerRestore() {
       </div>
       <button
         :class="['annotation-btn', { active: annotationStore.mode === 'placing' }]"
-        @click="toggleAnnotationMode"
         title="标注"
+        @click="toggleAnnotationMode"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 20h9"/>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
         </svg>
       </button>
       <button
         class="market-btn"
-        @click="$emit('open-market')"
         title="市场情绪看板"
+        @click="$emit('open-market')"
       >
         市场
       </button>
       <button
         class="market-btn"
-        @click="$emit('open-news')"
         title="行业资讯"
+        @click="$emit('open-news')"
       >
         资讯
       </button>
       <div class="backup-btns">
-        <button class="icon-btn" @click="downloadBackup" title="备份数据">💾</button>
-        <button class="icon-btn" @click="triggerRestore" title="恢复数据">📂</button>
+        <button
+          class="icon-btn"
+          title="备份数据"
+          @click="downloadBackup"
+        >
+          💾
+        </button>
+        <button
+          class="icon-btn"
+          title="恢复数据"
+          @click="triggerRestore"
+        >
+          📂
+        </button>
       </div>
     </div>
   </div>

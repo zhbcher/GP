@@ -162,7 +162,7 @@ function setupChartActions() {
     if (!kData) return
 
     const d = new Date(kData.timestamp)
-    const tradeDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const tradeDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 
     annotationStore.setPlacingTarget({
       tradeDate,
@@ -332,7 +332,7 @@ function syncAnnotationOverlays() {
   for (const ann of annotationStore.visibleAnnotations) {
     const klineItem = stockStore.klineData.find(k => {
       const d = new Date(k.timestamp)
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
       return dateStr === ann.trade_date
     })
     if (klineItem) {
@@ -357,7 +357,7 @@ function drawOversoldSignals(klineData: any[], sigData: any) {
     chart.removeOverlay({ name: 'signalTriangle' })
     for (const k of klineData) {
       const d = new Date(k.timestamp)
-      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+      const ds = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`
       if (sigData.date && ds === sigData.date) {
         const base = sigData.base || {}
         const consol = sigData.consolidation || {}
@@ -459,8 +459,16 @@ defineExpose({ changePeriod, changeAdjust })
 </script>
 
 <template>
-  <div class="chart-wrapper" ref="containerRef">
-    <div v-if="loading" class="loading-overlay">加载中...</div>
+  <div
+    ref="containerRef"
+    class="chart-wrapper"
+  >
+    <div
+      v-if="loading"
+      class="loading-overlay"
+    >
+      加载中...
+    </div>
   </div>
 </template>
 

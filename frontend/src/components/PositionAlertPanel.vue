@@ -168,129 +168,273 @@ function alertLabel(a: any): string {
 <template>
   <div class="pos-alert-panel">
     <div class="panel-tabs">
-      <button :class="{ active: activeTab === 'position' }" @click="activeTab = 'position'">持仓</button>
-      <button :class="{ active: activeTab === 'alert' }" @click="activeTab = 'alert'">预警</button>
+      <button
+        :class="{ active: activeTab === 'position' }"
+        @click="activeTab = 'position'"
+      >
+        持仓
+      </button>
+      <button
+        :class="{ active: activeTab === 'alert' }"
+        @click="activeTab = 'alert'"
+      >
+        预警
+      </button>
     </div>
 
     <!-- Position tab -->
-    <div v-if="activeTab === 'position'" class="panel-content">
+    <div
+      v-if="activeTab === 'position'"
+      class="panel-content"
+    >
       <!-- Grand total across ALL stocks -->
-      <div v-if="positionStore.summary" class="grand-total" :class="positionStore.summary.total_profit >= 0 ? 'profit-up' : 'profit-down'">
+      <div
+        v-if="positionStore.summary"
+        class="grand-total"
+        :class="positionStore.summary.total_profit >= 0 ? 'profit-up' : 'profit-down'"
+      >
         <div class="grand-cell">
           <span class="grand-label">证券市值</span>
           <span class="grand-value">{{ fmtMoney(positionStore.summary.market_value, false) }}</span>
         </div>
-        <div class="grand-divider"></div>
+        <div class="grand-divider" />
         <div class="grand-cell">
           <span class="grand-label">总盈亏</span>
-          <span class="grand-value" :class="positionStore.summary.total_profit >= 0 ? 'text-up' : 'text-down'">
+          <span
+            class="grand-value"
+            :class="positionStore.summary.total_profit >= 0 ? 'text-up' : 'text-down'"
+          >
             {{ fmtMoney(positionStore.summary.total_profit) }}
             <i class="grand-pct">{{ positionStore.summary.profit_pct >= 0 ? '+' : '' }}{{ positionStore.summary.profit_pct.toFixed(2) }}%</i>
           </span>
         </div>
       </div>
 
-      <button class="add-btn" @click="showPosForm = !showPosForm">
+      <button
+        class="add-btn"
+        @click="showPosForm = !showPosForm"
+      >
         {{ showPosForm ? '取消' : '+ 添加持仓' }}
       </button>
 
-      <div v-if="showPosForm" class="form-section">
-        <input v-model="posForm.cost_price" type="number" placeholder="成本价" step="0.001" />
-        <input v-model="posForm.quantity" type="number" placeholder="数量(股)" step="100" />
-        <input v-model="posForm.buy_date" type="date" />
-        <input v-model="posForm.note" placeholder="备注" />
-        <button class="save-btn" @click="savePosition">保存</button>
+      <div
+        v-if="showPosForm"
+        class="form-section"
+      >
+        <input
+          v-model="posForm.cost_price"
+          type="number"
+          placeholder="成本价"
+          step="0.001"
+        >
+        <input
+          v-model="posForm.quantity"
+          type="number"
+          placeholder="数量(股)"
+          step="100"
+        >
+        <input
+          v-model="posForm.buy_date"
+          type="date"
+        >
+        <input
+          v-model="posForm.note"
+          placeholder="备注"
+        >
+        <button
+          class="save-btn"
+          @click="savePosition"
+        >
+          保存
+        </button>
       </div>
 
       <!-- Summary bar -->
-      <div v-if="currentPositions.length > 0" class="pos-summary">
+      <div
+        v-if="currentPositions.length > 0"
+        class="pos-summary"
+      >
         <div class="summary-item">
           <span class="summary-label">总市值</span>
           <span class="summary-value">{{ fmtMoney(totalMarketValue, false) }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">总盈亏</span>
-          <span class="summary-value" :class="totalProfit >= 0 ? 'text-up' : 'text-down'">{{ fmtMoney(totalProfit) }}</span>
+          <span
+            class="summary-value"
+            :class="totalProfit >= 0 ? 'text-up' : 'text-down'"
+          >{{ fmtMoney(totalProfit) }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">收益率</span>
-          <span class="summary-value" :class="totalProfitPct >= 0 ? 'text-up' : 'text-down'">{{ totalProfitPct >= 0 ? '+' : '' }}{{ totalProfitPct.toFixed(2) }}%</span>
+          <span
+            class="summary-value"
+            :class="totalProfitPct >= 0 ? 'text-up' : 'text-down'"
+          >{{ totalProfitPct >= 0 ? '+' : '' }}{{ totalProfitPct.toFixed(2) }}%</span>
         </div>
       </div>
 
-      <div v-for="pos in currentPositions" :key="pos.id" class="pos-item">
+      <div
+        v-for="pos in currentPositions"
+        :key="pos.id"
+        class="pos-item"
+      >
         <div class="pos-main">
           <div class="pos-row">
             <span class="pos-cost">成本 <b>{{ pos.cost_price.toFixed(3) }}</b></span>
             <span class="pos-qty">{{ pos.quantity }}股</span>
-            <button class="del-btn" @click="removePosition(pos.id)">×</button>
+            <button
+              class="del-btn"
+              @click="removePosition(pos.id)"
+            >
+              ×
+            </button>
           </div>
           <div class="pos-row">
-            <span class="pos-cur">现价 <b>{{ positionPrice(pos) ? positionPrice(pos).toFixed(2) : '--' }}</b><i v-if="!isRealtimePrice(pos) && positionPrice(pos)" class="price-tag">收</i></span>
+            <span class="pos-cur">现价 <b>{{ positionPrice(pos) ? positionPrice(pos).toFixed(2) : '--' }}</b><i
+              v-if="!isRealtimePrice(pos) && positionPrice(pos)"
+              class="price-tag"
+            >收</i></span>
             <span class="pos-mv">市值 {{ fmtMoney(marketValue(pos), false) }}</span>
           </div>
         </div>
-        <div class="pos-profit-box" :class="profitPct(pos) >= 0 ? 'text-up' : 'text-down'">
+        <div
+          class="pos-profit-box"
+          :class="profitPct(pos) >= 0 ? 'text-up' : 'text-down'"
+        >
           <span class="pos-profit-amt">{{ fmtMoney(profitAmount(pos)) }}</span>
           <span class="pos-profit-pct">{{ profitPct(pos) >= 0 ? '+' : '' }}{{ profitPct(pos).toFixed(2) }}%</span>
         </div>
       </div>
 
-      <div v-if="currentPositions.length === 0 && !showPosForm" class="empty">暂无持仓</div>
+      <div
+        v-if="currentPositions.length === 0 && !showPosForm"
+        class="empty"
+      >
+        暂无持仓
+      </div>
     </div>
 
     <!-- Alert tab -->
-    <div v-if="activeTab === 'alert'" class="panel-content">
-      <button class="add-btn" @click="showAlertForm = !showAlertForm">
+    <div
+      v-if="activeTab === 'alert'"
+      class="panel-content"
+    >
+      <button
+        class="add-btn"
+        @click="showAlertForm = !showAlertForm"
+      >
         {{ showAlertForm ? '取消' : '+ 添加预警' }}
       </button>
 
-      <div v-if="showAlertForm" class="form-section">
+      <div
+        v-if="showAlertForm"
+        class="form-section"
+      >
         <select v-model="alertForm.alert_type">
-          <option value="price">目标价</option>
-          <option value="change_pct">涨跌幅</option>
-          <option value="volume">放量</option>
+          <option value="price">
+            目标价
+          </option>
+          <option value="change_pct">
+            涨跌幅
+          </option>
+          <option value="volume">
+            放量
+          </option>
         </select>
 
         <!-- Price alert params -->
         <template v-if="alertForm.alert_type === 'price'">
-          <input v-model="alertForm.target_price" type="number" placeholder="目标价" step="0.01" />
+          <input
+            v-model="alertForm.target_price"
+            type="number"
+            placeholder="目标价"
+            step="0.01"
+          >
           <select v-model="alertForm.direction">
-            <option value="above">涨到</option>
-            <option value="below">跌到</option>
+            <option value="above">
+              涨到
+            </option>
+            <option value="below">
+              跌到
+            </option>
           </select>
         </template>
 
         <!-- Change pct alert params -->
         <template v-if="alertForm.alert_type === 'change_pct'">
-          <input v-model="alertForm.pct_threshold" type="number" placeholder="涨跌幅阈值(%)" step="0.1" />
+          <input
+            v-model="alertForm.pct_threshold"
+            type="number"
+            placeholder="涨跌幅阈值(%)"
+            step="0.1"
+          >
           <select v-model="alertForm.direction">
-            <option value="above">涨超</option>
-            <option value="below">跌超</option>
+            <option value="above">
+              涨超
+            </option>
+            <option value="below">
+              跌超
+            </option>
           </select>
         </template>
 
         <!-- Volume alert params -->
         <template v-if="alertForm.alert_type === 'volume'">
-          <input v-model="alertForm.volume_days" type="number" placeholder="均量天数" step="1" />
-          <input v-model="alertForm.volume_ratio" type="number" placeholder="倍数(如2.0)" step="0.1" />
+          <input
+            v-model="alertForm.volume_days"
+            type="number"
+            placeholder="均量天数"
+            step="1"
+          >
+          <input
+            v-model="alertForm.volume_ratio"
+            type="number"
+            placeholder="倍数(如2.0)"
+            step="0.1"
+          >
         </template>
 
-        <button class="save-btn" @click="saveAlert">保存</button>
+        <button
+          class="save-btn"
+          @click="saveAlert"
+        >
+          保存
+        </button>
       </div>
 
-      <div v-for="alert in currentAlerts" :key="alert.id" class="alert-item">
+      <div
+        v-for="alert in currentAlerts"
+        :key="alert.id"
+        class="alert-item"
+      >
         <div class="alert-info">
-          <span class="alert-type-tag" :style="{ color: alertTypeColors[alert.alert_type] || '#3b82f6' }">
+          <span
+            class="alert-type-tag"
+            :style="{ color: alertTypeColors[alert.alert_type] || '#3b82f6' }"
+          >
             {{ alertTypeLabels[alert.alert_type] || alert.alert_type }}
           </span>
           <span class="alert-desc">{{ alertLabel(alert) }}</span>
         </div>
-        <span v-if="alert.triggered" class="alert-triggered">已触发</span>
-        <button class="del-btn" @click="alertStore.remove(alert.id)">×</button>
+        <span
+          v-if="alert.triggered"
+          class="alert-triggered"
+        >已触发</span>
+        <button
+          class="del-btn"
+          @click="alertStore.remove(alert.id)"
+        >
+          ×
+        </button>
       </div>
 
-      <div v-if="currentAlerts.length === 0 && !showAlertForm" class="empty">暂无预警</div>
+      <div
+        v-if="currentAlerts.length === 0 && !showAlertForm"
+        class="empty"
+      >
+        暂无预警
+      </div>
     </div>
   </div>
 </template>

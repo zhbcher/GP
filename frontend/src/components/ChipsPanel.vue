@@ -214,9 +214,19 @@ defineExpose({ fetchChips, updatePriceRangeFromKline })
 
 <template>
   <div class="chips-panel">
-    <div class="chips-header">筹码</div>
-    <canvas ref="canvasRef" class="chips-canvas"></canvas>
-    <div v-if="loading" class="chips-loading">加载中</div>
+    <div class="chips-header">
+      筹码
+    </div>
+    <canvas
+      ref="canvasRef"
+      class="chips-canvas"
+    />
+    <div
+      v-if="loading"
+      class="chips-loading"
+    >
+      加载中
+    </div>
   </div>
 </template>
 

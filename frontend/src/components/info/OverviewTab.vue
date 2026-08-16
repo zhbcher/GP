@@ -40,52 +40,119 @@ const valGrid = computed(() => {
 <template>
   <div class="overview-tab">
     <!-- 解禁预警 -->
-    <div v-if="unlock" class="unlock-warning">
+    <div
+      v-if="unlock"
+      class="unlock-warning"
+    >
       ⚠️ 解禁预警：{{ unlock.date || '近期' }}
-      <template v-if="unlock.type"> · {{ unlock.type }}</template>
-      <template v-if="unlock.ratio != null"> · 占流通股 {{ formatPct(unlock.ratio) }}</template>
+      <template v-if="unlock.type">
+        · {{ unlock.type }}
+      </template>
+      <template v-if="unlock.ratio != null">
+        · 占流通股 {{ formatPct(unlock.ratio) }}
+      </template>
     </div>
 
     <!-- 估值速览 -->
     <section class="block">
-      <h4 class="block-title">估值速览</h4>
-      <div v-if="infoStore.overviewLoading" class="loading">加载中...</div>
-      <div v-else-if="valGrid.length" class="val-grid">
-        <div v-for="item in valGrid" :key="item.label" class="val-cell">
+      <h4 class="block-title">
+        估值速览
+      </h4>
+      <div
+        v-if="infoStore.overviewLoading"
+        class="loading"
+      >
+        加载中...
+      </div>
+      <div
+        v-else-if="valGrid.length"
+        class="val-grid"
+      >
+        <div
+          v-for="item in valGrid"
+          :key="item.label"
+          class="val-cell"
+        >
           <span class="val-label">{{ item.label }}</span>
           <span class="val-num">{{ item.val }}</span>
         </div>
       </div>
-      <div v-else class="empty">暂无数据</div>
+      <div
+        v-else
+        class="empty"
+      >
+        暂无数据
+      </div>
     </section>
 
     <!-- 资金流向 -->
     <section class="block">
-      <h4 class="block-title">资金流向</h4>
-      <div v-if="infoStore.overviewLoading" class="loading">加载中...</div>
+      <h4 class="block-title">
+        资金流向
+      </h4>
+      <div
+        v-if="infoStore.overviewLoading"
+        class="loading"
+      >
+        加载中...
+      </div>
       <template v-else-if="fundFlow">
         <div class="main-flow">
           <span class="main-label">今日主力净流入</span>
-          <span class="main-num" :class="mainCls">{{ formatAmount(mainNet) }}</span>
+          <span
+            class="main-num"
+            :class="mainCls"
+          >{{ formatAmount(mainNet) }}</span>
         </div>
         <div class="flow-rows">
-          <div v-for="row in flowRows" :key="row.label" class="flow-row">
+          <div
+            v-for="row in flowRows"
+            :key="row.label"
+            class="flow-row"
+          >
             <span class="flow-label">{{ row.label }}</span>
-            <span class="flow-num" :class="upDownClass(row.val)">{{ formatAmount(row.val) }}</span>
+            <span
+              class="flow-num"
+              :class="upDownClass(row.val)"
+            >{{ formatAmount(row.val) }}</span>
           </div>
         </div>
       </template>
-      <div v-else class="empty">暂无数据</div>
+      <div
+        v-else
+        class="empty"
+      >
+        暂无数据
+      </div>
     </section>
 
     <!-- 概念板块 -->
     <section class="block">
-      <h4 class="block-title">概念板块</h4>
-      <div v-if="infoStore.overviewLoading" class="loading">加载中...</div>
-      <div v-else-if="concepts.length" class="concept-tags">
-        <span v-for="c in concepts" :key="c" class="concept-tag">{{ c }}</span>
+      <h4 class="block-title">
+        概念板块
+      </h4>
+      <div
+        v-if="infoStore.overviewLoading"
+        class="loading"
+      >
+        加载中...
       </div>
-      <div v-else class="empty">暂无数据</div>
+      <div
+        v-else-if="concepts.length"
+        class="concept-tags"
+      >
+        <span
+          v-for="c in concepts"
+          :key="c"
+          class="concept-tag"
+        >{{ c }}</span>
+      </div>
+      <div
+        v-else
+        class="empty"
+      >
+        暂无数据
+      </div>
     </section>
   </div>
 </template>

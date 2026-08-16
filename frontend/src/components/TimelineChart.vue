@@ -340,8 +340,16 @@ watch(() => stockStore.currentCode, (code) => { if (code) loadData() })
 
 <template>
   <div class="timeline-container">
-    <canvas ref="canvasRef" class="timeline-canvas" />
-    <div v-if="loading" class="loading-overlay">加载中...</div>
+    <canvas
+      ref="canvasRef"
+      class="timeline-canvas"
+    />
+    <div
+      v-if="loading"
+      class="loading-overlay"
+    >
+      加载中...
+    </div>
   </div>
 </template>
 

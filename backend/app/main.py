@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.db import engine, Base, async_session_maker
 from app.auth import auth_middleware_handler
-from app.routers import health, search, stock, watchlist, drawings, annotations, ws, sync, alerts, positions, backup, auth, info, market, news, journal, chips, screen, data_io, predict, predict_acc, report
+from app.routers import health, search, stock, watchlist, drawings, annotations, ws, sync, alerts, positions, backup, auth, info, market, news, journal, chips, screen, data_io, predict, predict_acc, report, screen_v2
 from app.services.realtime_service import connection_manager, get_realtime_quotes
 from app.data_sources.manager import manager, DataSourceError
 from app.data_sources.mootdx_source import MootdxSource
@@ -305,6 +305,7 @@ app.include_router(data_io.router)
 app.include_router(predict.router)
 app.include_router(predict_acc.router)
 app.include_router(report.router)
+app.include_router(screen_v2.router)
 
 if __name__ == "__main__":
     import uvicorn

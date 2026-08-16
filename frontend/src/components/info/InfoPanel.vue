@@ -79,16 +79,16 @@ onMounted(() => {
       <!-- 骨架屏 -->
       <template v-if="currentLoading">
         <div class="skeleton">
-          <div class="sk-line w60"></div>
+          <div class="sk-line w60" />
           <div class="sk-grid">
-            <div class="sk-cell"></div>
-            <div class="sk-cell"></div>
-            <div class="sk-cell"></div>
-            <div class="sk-cell"></div>
+            <div class="sk-cell" />
+            <div class="sk-cell" />
+            <div class="sk-cell" />
+            <div class="sk-cell" />
           </div>
-          <div class="sk-line w100"></div>
-          <div class="sk-line w80"></div>
-          <div class="sk-line w90"></div>
+          <div class="sk-line w100" />
+          <div class="sk-line w80" />
+          <div class="sk-line w90" />
         </div>
       </template>
 

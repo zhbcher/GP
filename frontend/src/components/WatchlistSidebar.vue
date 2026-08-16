@@ -217,59 +217,125 @@ function changeColor(pct: number): string {
       <div class="header-actions">
         <button
           class="import-btn"
-          @click="openImportModal"
           title="批量导入"
+          @click="openImportModal"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 1a.5.5 0 0 1 .5.5v5.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 7.293V1.5A.5.5 0 0 1 8 1z"/>
-            <path d="M3 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5z"/>
-            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h11A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zm1.5-.5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-11z"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M8 1a.5.5 0 0 1 .5.5v5.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 7.293V1.5A.5.5 0 0 1 8 1z" />
+            <path d="M3 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5z" />
+            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h11A1.5 1.5 0 0 1 15 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zm1.5-.5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-11z" />
           </svg>
         </button>
         <button
           class="filter-toggle-btn"
           :class="{ active: showFilterPanel || isFiltering }"
-          @click="showFilterPanel = !showFilterPanel"
           title="条件筛选"
+          @click="showFilterPanel = !showFilterPanel"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M1.5 1.5a.5.5 0 0 1 .5-.5h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.146.354L10 7.707V14.5a.5.5 0 0 1-.853.354l-3-3A.5.5 0 0 1 6 11.5V7.707L1.646 3.854A.5.5 0 0 1 1.5 3.5v-2z"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <path d="M1.5 1.5a.5.5 0 0 1 .5-.5h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.146.354L10 7.707V14.5a.5.5 0 0 1-.853.354l-3-3A.5.5 0 0 1 6 11.5V7.707L1.646 3.854A.5.5 0 0 1 1.5 3.5v-2z" />
           </svg>
-          <span v-if="isFiltering" class="filter-badge">筛选中</span>
+          <span
+            v-if="isFiltering"
+            class="filter-badge"
+          >筛选中</span>
         </button>
       </div>
     </div>
 
     <!-- Filter Panel -->
-    <div v-if="showFilterPanel" class="filter-panel">
+    <div
+      v-if="showFilterPanel"
+      class="filter-panel"
+    >
       <div class="filter-panel-header">
         <span>条件筛选</span>
-        <button class="filter-close-btn" @click="showFilterPanel = false">×</button>
+        <button
+          class="filter-close-btn"
+          @click="showFilterPanel = false"
+        >
+          ×
+        </button>
       </div>
 
-      <div v-if="filterConditions.length === 0" class="filter-empty">
-        <button class="add-condition-btn" @click="addCondition">+ 添加条件</button>
+      <div
+        v-if="filterConditions.length === 0"
+        class="filter-empty"
+      >
+        <button
+          class="add-condition-btn"
+          @click="addCondition"
+        >
+          + 添加条件
+        </button>
       </div>
 
-      <div v-for="(cond, idx) in filterConditions" :key="idx" class="condition-row">
-        <select v-model="cond.type" class="cond-select">
-          <option v-for="opt in conditionTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      <div
+        v-for="(cond, idx) in filterConditions"
+        :key="idx"
+        class="condition-row"
+      >
+        <select
+          v-model="cond.type"
+          class="cond-select"
+        >
+          <option
+            v-for="opt in conditionTypeOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
         </select>
 
         <template v-if="cond.type === 'return_pct'">
           <span class="cond-label">近</span>
-          <input v-model.number="cond.days" type="number" min="1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.days"
+            type="number"
+            min="1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">日涨幅</span>
-          <select v-model="cond.operator" class="cond-select-sm">
-            <option v-for="op in operatorOptions" :key="op" :value="op">{{ op }}</option>
+          <select
+            v-model="cond.operator"
+            class="cond-select-sm"
+          >
+            <option
+              v-for="op in operatorOptions"
+              :key="op"
+              :value="op"
+            >
+              {{ op }}
+            </option>
           </select>
-          <input v-model.number="cond.value" type="number" step="0.1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.value"
+            type="number"
+            step="0.1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">%</span>
         </template>
 
         <template v-else-if="cond.type === 'above_ma'">
           <span class="cond-label">站上 MA</span>
-          <input v-model.number="cond.ma_period" type="number" min="1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.ma_period"
+            type="number"
+            min="1"
+            class="cond-input-sm"
+          >
         </template>
 
         <template v-else-if="cond.type === 'macd_golden_cross'">
@@ -278,57 +344,133 @@ function changeColor(pct: number): string {
 
         <template v-else-if="cond.type === 'volume_surge'">
           <span class="cond-label">近</span>
-          <input v-model.number="cond.days" type="number" min="1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.days"
+            type="number"
+            min="1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">日均量</span>
-          <input v-model.number="cond.multiplier" type="number" step="0.1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.multiplier"
+            type="number"
+            step="0.1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">倍</span>
         </template>
 
         <template v-else-if="cond.type === 'rsi_oversold' || cond.type === 'rsi_overbought'">
           <span class="cond-label">RSI(</span>
-          <input v-model.number="cond.period" type="number" min="2" class="cond-input-sm" />
+          <input
+            v-model.number="cond.period"
+            type="number"
+            min="2"
+            class="cond-input-sm"
+          >
           <span class="cond-label">) {{ cond.type === 'rsi_oversold' ? '≤' : '≥' }}</span>
-          <input v-model.number="cond.value" type="number" min="0" max="100" class="cond-input-sm" />
+          <input
+            v-model.number="cond.value"
+            type="number"
+            min="0"
+            max="100"
+            class="cond-input-sm"
+          >
         </template>
 
         <template v-else-if="cond.type === 'boll_touch_lower' || cond.type === 'boll_touch_upper'">
           <span class="cond-label">BOLL(</span>
-          <input v-model.number="cond.period" type="number" min="2" class="cond-input-sm" />
+          <input
+            v-model.number="cond.period"
+            type="number"
+            min="2"
+            class="cond-input-sm"
+          >
           <span class="cond-label">,</span>
-          <input v-model.number="cond.multiplier" type="number" step="0.1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.multiplier"
+            type="number"
+            step="0.1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">σ)</span>
         </template>
 
         <template v-else-if="cond.type === 'return_range'">
           <span class="cond-label">近</span>
-          <input v-model.number="cond.days" type="number" min="1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.days"
+            type="number"
+            min="1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">日涨幅 ∈ [</span>
-          <input v-model.number="cond.min_value" type="number" step="0.1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.min_value"
+            type="number"
+            step="0.1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">,</span>
-          <input v-model.number="cond.max_value" type="number" step="0.1" class="cond-input-sm" />
+          <input
+            v-model.number="cond.max_value"
+            type="number"
+            step="0.1"
+            class="cond-input-sm"
+          >
           <span class="cond-label">]%</span>
         </template>
 
-        <button class="remove-cond-btn" @click="removeCondition(idx)">×</button>
+        <button
+          class="remove-cond-btn"
+          @click="removeCondition(idx)"
+        >
+          ×
+        </button>
       </div>
 
       <div class="filter-actions">
-        <button class="add-condition-btn" @click="addCondition">+ 添加条件</button>
-        <button class="run-screen-btn" :disabled="filtering || filterConditions.length === 0" @click="runScreen">
+        <button
+          class="add-condition-btn"
+          @click="addCondition"
+        >
+          + 添加条件
+        </button>
+        <button
+          class="run-screen-btn"
+          :disabled="filtering || filterConditions.length === 0"
+          @click="runScreen"
+        >
           {{ filtering ? '筛选中...' : '执行筛选' }}
         </button>
       </div>
 
-      <div v-if="filterError" class="filter-error">{{ filterError }}</div>
+      <div
+        v-if="filterError"
+        class="filter-error"
+      >
+        {{ filterError }}
+      </div>
     </div>
 
     <!-- Filter status bar -->
-    <div v-if="isFiltering" class="filter-status-bar">
+    <div
+      v-if="isFiltering"
+      class="filter-status-bar"
+    >
       <span>筛选中: {{ filteredStocksFlat.value?.length ?? filteredStocksFlat.length }}只</span>
-      <button class="clear-filter-btn" @click="clearFilter">清除筛选</button>
+      <button
+        class="clear-filter-btn"
+        @click="clearFilter"
+      >
+        清除筛选
+      </button>
     </div>
 
-    <div v-if="!isFiltering" class="group-tabs">
+    <div
+      v-if="!isFiltering"
+      class="group-tabs"
+    >
       <button
         :class="['group-tab', { active: activeGroup === null }]"
         @click="activeGroup = null"
@@ -343,7 +485,12 @@ function changeColor(pct: number): string {
       >
         {{ g.name }}
       </button>
-      <button class="group-tab add-group" @click="$emit('add-group')">+</button>
+      <button
+        class="group-tab add-group"
+        @click="$emit('add-group')"
+      >
+        +
+      </button>
     </div>
 
     <div class="stock-list">
@@ -352,7 +499,10 @@ function changeColor(pct: number): string {
         :key="group.id"
         class="stock-group"
       >
-        <div v-if="displayGroups.length > 1 || isFiltering" class="group-label">
+        <div
+          v-if="displayGroups.length > 1 || isFiltering"
+          class="group-label"
+        >
           {{ group.name }}
         </div>
         <div
@@ -370,54 +520,101 @@ function changeColor(pct: number): string {
             <span class="stock-code">{{ stock.stock_code }}</span>
           </div>
           <div class="stock-right">
-            <div class="stock-price" :class="changeColor(stock.realtime?.change_pct || 0)">
+            <div
+              class="stock-price"
+              :class="changeColor(stock.realtime?.change_pct || 0)"
+            >
               <span class="price-value">{{ formatPrice(stock.realtime?.price || 0) }}</span>
               <span class="price-change">{{ formatChange(stock.realtime?.change_pct || 0) }}</span>
             </div>
-            <button class="delete-btn" @click="deleteStock(stock.id, $event)" title="删除自选">×</button>
+            <button
+              class="delete-btn"
+              title="删除自选"
+              @click="deleteStock(stock.id, $event)"
+            >
+              ×
+            </button>
           </div>
         </div>
       </div>
 
-      <div v-if="watchlistStore.allStocks.length === 0" class="empty-state">
+      <div
+        v-if="watchlistStore.allStocks.length === 0"
+        class="empty-state"
+      >
         <p>自选股列表为空</p>
-        <p class="hint">搜索股票并添加到自选</p>
+        <p class="hint">
+          搜索股票并添加到自选
+        </p>
       </div>
 
-      <div v-if="isFiltering && filteredStocksFlat.length === 0" class="empty-state">
+      <div
+        v-if="isFiltering && filteredStocksFlat.length === 0"
+        class="empty-state"
+      >
         <p>无符合条件的股票</p>
-        <p class="hint">调整条件后重新筛选</p>
+        <p class="hint">
+          调整条件后重新筛选
+        </p>
       </div>
     </div>
 
     <PositionAlertPanel />
 
     <!-- NV-002: Import Modal -->
-    <div v-if="showImportModal" class="import-overlay" @click.self="showImportModal = false">
+    <div
+      v-if="showImportModal"
+      class="import-overlay"
+      @click.self="showImportModal = false"
+    >
       <div class="import-modal">
         <div class="import-modal-header">
           <span>批量导入自选股</span>
-          <button class="filter-close-btn" @click="showImportModal = false">×</button>
+          <button
+            class="filter-close-btn"
+            @click="showImportModal = false"
+          >
+            ×
+          </button>
         </div>
         <textarea
           v-model="importText"
           class="import-textarea"
           placeholder="每行一个代码，或逗号分隔：600519, 000858, 601888&#10;支持带前缀：sh600519, sz000858"
           rows="8"
-        ></textarea>
+        />
         <div class="import-modal-actions">
-          <button class="import-cancel-btn" @click="showImportModal = false">取消</button>
-          <button class="import-confirm-btn" :disabled="importing || parseImportText().length === 0" @click="doImport">
+          <button
+            class="import-cancel-btn"
+            @click="showImportModal = false"
+          >
+            取消
+          </button>
+          <button
+            class="import-confirm-btn"
+            :disabled="importing || parseImportText().length === 0"
+            @click="doImport"
+          >
             {{ importing ? '导入中...' : '确认导入' }}
           </button>
         </div>
-        <div v-if="importResult" class="import-result">
+        <div
+          v-if="importResult"
+          class="import-result"
+        >
           <div class="import-result-row">
             <span class="result-label">✅ 导入成功</span>
             <span class="result-value">{{ importResult.imported.length }} 只</span>
           </div>
-          <div v-if="importResult.imported.length" class="import-detail">
-            <span v-for="s in importResult.imported" :key="s.code" class="import-tag imported">
+          <div
+            v-if="importResult.imported.length"
+            class="import-detail"
+          >
+            <span
+              v-for="s in importResult.imported"
+              :key="s.code"
+              class="import-tag imported"
+            >
               {{ s.name }} ({{ s.code }})
             </span>
           </div>
@@ -425,15 +622,29 @@ function changeColor(pct: number): string {
             <span class="result-label">⏭ 跳过（已存在）</span>
             <span class="result-value">{{ importResult.skipped.length }} 只</span>
           </div>
-          <div v-if="importResult.skipped.length" class="import-detail">
-            <span v-for="c in importResult.skipped" :key="c" class="import-tag skipped">{{ c }}</span>
+          <div
+            v-if="importResult.skipped.length"
+            class="import-detail"
+          >
+            <span
+              v-for="c in importResult.skipped"
+              :key="c"
+              class="import-tag skipped"
+            >{{ c }}</span>
           </div>
           <div class="import-result-row">
             <span class="result-label">❓ 未找到</span>
             <span class="result-value">{{ importResult.not_found.length }} 只</span>
           </div>
-          <div v-if="importResult.not_found.length" class="import-detail">
-            <span v-for="c in importResult.not_found" :key="c" class="import-tag not-found">{{ c }}</span>
+          <div
+            v-if="importResult.not_found.length"
+            class="import-detail"
+          >
+            <span
+              v-for="c in importResult.not_found"
+              :key="c"
+              class="import-tag not-found"
+            >{{ c }}</span>
           </div>
         </div>
       </div>

@@ -12,7 +12,12 @@ function openUrl(url?: string) {
 
 <template>
   <div class="news-tab">
-    <div v-if="infoStore.newsLoading" class="loading">加载中...</div>
+    <div
+      v-if="infoStore.newsLoading"
+      class="loading"
+    >
+      加载中...
+    </div>
     <template v-else-if="news.length">
       <div
         v-for="(item, idx) in news"
@@ -21,14 +26,27 @@ function openUrl(url?: string) {
         :class="{ clickable: !!item.url }"
         @click="openUrl(item.url)"
       >
-        <div class="news-title">{{ item.title }}</div>
+        <div class="news-title">
+          {{ item.title }}
+        </div>
         <div class="news-meta">
-          <span v-if="item.source" class="news-source">{{ item.source }}</span>
-          <span v-if="item.time" class="news-time">{{ item.time }}</span>
+          <span
+            v-if="item.source"
+            class="news-source"
+          >{{ item.source }}</span>
+          <span
+            v-if="item.time"
+            class="news-time"
+          >{{ item.time }}</span>
         </div>
       </div>
     </template>
-    <div v-else class="empty">暂无数据</div>
+    <div
+      v-else
+      class="empty"
+    >
+      暂无数据
+    </div>
   </div>
 </template>
 

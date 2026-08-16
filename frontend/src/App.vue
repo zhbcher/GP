@@ -14,6 +14,7 @@ import IndustryNews from './components/news/IndustryNews.vue'
 import LoginView from './components/LoginView.vue'
 import CompareView from './components/CompareView.vue'
 import ChipsPanel from './components/ChipsPanel.vue'
+import ScreenPanel from './components/ScreenPanel.vue'
 import { useWatchlistStore } from './stores/watchlist'
 import { useRealtimeStore } from './stores/realtime'
 import { useStockStore } from './stores/stock'
@@ -23,7 +24,7 @@ import type { PeriodType, AdjustType } from './types'
 
 const sidebarOpen = ref(true)
 const fullscreen = ref(false)  // FE-006
-const rightPanel = ref<'annotation' | 'info' | 'journal' | 'predict'>('annotation')  // 右侧面板切换
+const rightPanel = ref<'annotation' | 'info' | 'journal' | 'predict' | 'screen'>('annotation')  // 右侧面板切换
 
 // 打开预测 tab 时联动 predictStore（触发自动加载）
 import { usePredictStore as usePredictStoreForTab } from '@/stores/predict'
@@ -146,68 +147,103 @@ function onAdjustChange(a: AdjustType) {
 
 <template>
   <!-- Login gate -->
-  <LoginView v-if="authChecked && !authenticated" @authenticated="onAuthenticated" />
+  <LoginView
+    v-if="authChecked && !authenticated"
+    @authenticated="onAuthenticated"
+  />
 
   <template v-else-if="authChecked">
-    <CompareView v-if="showCompare" @exit="showCompare = false" />
-    <div v-show="!showCompare" class="app-layout" :class="{ fullscreen }">
-    <TopBar
-      v-if="!fullscreen"
-      @toggle-sidebar="sidebarOpen = !sidebarOpen"
-      @period-change="onPeriodChange"
-      @adjust-change="onAdjustChange"
-      @open-market="showMarket = true"
-      @open-news="showNews = true"
+    <CompareView
+      v-if="showCompare"
+      @exit="showCompare = false"
     />
+    <div
+      v-show="!showCompare"
+      class="app-layout"
+      :class="{ fullscreen }"
+    >
+      <TopBar
+        v-if="!fullscreen"
+        @toggle-sidebar="sidebarOpen = !sidebarOpen"
+        @period-change="onPeriodChange"
+        @adjust-change="onAdjustChange"
+        @open-market="showMarket = true"
+        @open-news="showNews = true"
+      />
 
-    <div class="main-area">
-      <WatchlistSidebar v-if="sidebarOpen && !fullscreen" />
+      <div class="main-area">
+        <WatchlistSidebar v-if="sidebarOpen && !fullscreen" />
 
-      <div class="chart-area">
-        <TimelineChart v-if="stockStore.period === 'timeline'" />
-        <div v-show="stockStore.period !== 'timeline'" class="chart-with-chips">
-          <KlineChartWrapper ref="chartRef" />
-          <ChipsPanel v-if="showChips" />
+        <div class="chart-area">
+          <TimelineChart v-if="stockStore.period === 'timeline'" />
+          <div
+            v-show="stockStore.period !== 'timeline'"
+            class="chart-with-chips"
+          >
+            <KlineChartWrapper ref="chartRef" />
+            <ChipsPanel v-if="showChips" />
+          </div>
+          <DrawingToolbar
+            v-if="!fullscreen"
+            @open-compare="showCompare = true"
+          />
         </div>
-        <DrawingToolbar v-if="!fullscreen" @open-compare="showCompare = true" />
+
+        <div
+          v-if="!fullscreen"
+          class="right-panel"
+        >
+          <div class="right-panel-tabs">
+            <button
+              :class="['rp-tab', { active: rightPanel === 'annotation' }]"
+              @click="rightPanel = 'annotation'"
+            >
+              标注
+            </button>
+            <button
+              :class="['rp-tab', { active: rightPanel === 'info' }]"
+              @click="rightPanel = 'info'"
+            >
+              信息
+            </button>
+            <button
+              :class="['rp-tab', { active: rightPanel === 'journal' }]"
+              @click="rightPanel = 'journal'"
+            >
+              复盘
+            </button>
+            <button
+              :class="['rp-tab', { active: rightPanel === 'predict' }]"
+              @click="rightPanel = 'predict'; openPredict()" 
+            >
+              预测
+            </button>
+            <button
+              :class="['rp-tab', { active: rightPanel === 'screen' }]"
+              @click="rightPanel = 'screen'"
+            >
+              选股
+            </button>
+          </div>
+          <AnnotationPanel v-show="rightPanel === 'annotation'" />
+          <InfoPanel
+            v-show="rightPanel === 'info'"
+            :stock-code="stockStore.currentCode"
+          />
+          <JournalPanel v-show="rightPanel === 'journal'" />
+          <PredictPanel v-show="rightPanel === 'predict'" />
+          <ScreenPanel v-show="rightPanel === 'screen'" />
+        </div>
       </div>
 
-      <div v-if="!fullscreen" class="right-panel">
-        <div class="right-panel-tabs">
-          <button
-            :class="['rp-tab', { active: rightPanel === 'annotation' }]"
-            @click="rightPanel = 'annotation'"
-          >
-            标注
-          </button>
-          <button
-            :class="['rp-tab', { active: rightPanel === 'info' }]"
-            @click="rightPanel = 'info'"
-          >
-            信息
-          </button>
-          <button
-            :class="['rp-tab', { active: rightPanel === 'journal' }]"
-            @click="rightPanel = 'journal'"
-          >
-            复盘
-          </button>
-          <button
-            :class="['rp-tab', { active: rightPanel === 'predict' }]"
-            @click="rightPanel = 'predict'; openPredict()" 
-          >
-            预测
-          </button>
-        </div>
-        <AnnotationPanel v-show="rightPanel === 'annotation'" />
-        <InfoPanel v-show="rightPanel === 'info'" :stock-code="stockStore.currentCode" />
-        <JournalPanel v-show="rightPanel === 'journal'" />
-        <PredictPanel v-show="rightPanel === 'predict'" />
-      </div>
-    </div>
-
-    <MarketDashboard v-if="showMarket" @back="showMarket = false" />
-    <IndustryNews v-if="showNews" @back="showNews = false" />
+      <MarketDashboard
+        v-if="showMarket"
+        @back="showMarket = false"
+      />
+      <IndustryNews
+        v-if="showNews"
+        @back="showNews = false"
+      />
     </div>
   </template>
 </template>

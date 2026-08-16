@@ -61,12 +61,20 @@ onUnmounted(() => {
         :style="{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }"
       >
         <div class="tooltip-header">
-          <span class="tooltip-dot" :style="{ background: ANNOTATION_COLORS[tooltip.type] }"></span>
-          <span class="tooltip-type" :style="{ color: ANNOTATION_COLORS[tooltip.type] }">
+          <span
+            class="tooltip-dot"
+            :style="{ background: ANNOTATION_COLORS[tooltip.type] }"
+          />
+          <span
+            class="tooltip-type"
+            :style="{ color: ANNOTATION_COLORS[tooltip.type] }"
+          >
             {{ ANNOTATION_LABELS[tooltip.type] }}
           </span>
         </div>
-        <div class="tooltip-content">{{ tooltip.content }}</div>
+        <div class="tooltip-content">
+          {{ tooltip.content }}
+        </div>
       </div>
     </Transition>
   </Teleport>

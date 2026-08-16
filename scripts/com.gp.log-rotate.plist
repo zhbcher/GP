@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.gp.log-rotate</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/zhoubo/GP/scripts/gp_log_rotate.sh</string>
+    </array>
+    <!-- 每天 23:50 执行一次（系统时区，日志轮转无需对齐北京时间） -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>23</integer>
+        <key>Minute</key><integer>50</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/zhoubo/GP/scripts/log_rotate.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/zhoubo/GP/scripts/log_rotate.err.log</string>
+</dict>
+</plist>

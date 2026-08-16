@@ -443,7 +443,9 @@ def main():
         print(f"\n  运行集成回测...")
         models_info = []
         for f in valid_factors:
-            bf = next(b for b in BASE_FACTORS if b['name'] == f['name'].rsplit('_', 1)[0])
+            bf = next((b for b in BASE_FACTORS if b['name'] == f['name'].rsplit('_', 1)[0]), None)
+            if bf is None:
+                continue
             save_path = os.path.join(MODEL_DIR, f"best_model_{f['name']}.joblib")
             if os.path.exists(save_path):
                 model = joblib.load(save_path)

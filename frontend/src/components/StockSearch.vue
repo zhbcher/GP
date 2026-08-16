@@ -28,7 +28,11 @@ function close() {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="modal-backdrop" @click.self="close">
+      <div
+        v-if="show"
+        class="modal-backdrop"
+        @click.self="close"
+      >
         <div class="modal-panel">
           <h3>新建分组</h3>
           <div class="field">
@@ -36,12 +40,27 @@ function close() {
               v-model="name"
               placeholder="分组名称（如：重仓、观察）"
               @keyup.enter="handleCreate"
-            />
+            >
           </div>
-          <div v-if="error" class="error">{{ error }}</div>
+          <div
+            v-if="error"
+            class="error"
+          >
+            {{ error }}
+          </div>
           <div class="actions">
-            <button class="btn-cancel" @click="close">取消</button>
-            <button class="btn-save" @click="handleCreate">创建</button>
+            <button
+              class="btn-cancel"
+              @click="close"
+            >
+              取消
+            </button>
+            <button
+              class="btn-save"
+              @click="handleCreate"
+            >
+              创建
+            </button>
           </div>
         </div>
       </div>

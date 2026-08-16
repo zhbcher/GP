@@ -12,7 +12,12 @@ function openUrl(url?: string) {
 
 <template>
   <div class="announcement-tab">
-    <div v-if="infoStore.announcementsLoading" class="loading">加载中...</div>
+    <div
+      v-if="infoStore.announcementsLoading"
+      class="loading"
+    >
+      加载中...
+    </div>
     <template v-else-if="announcements.length">
       <div
         v-for="(item, idx) in announcements"
@@ -23,14 +28,28 @@ function openUrl(url?: string) {
       >
         <div class="ann-main">
           <span class="ann-title">{{ item.title }}</span>
-          <span v-if="item.type" class="ann-type" :class="{ negative: item.is_negative }">
+          <span
+            v-if="item.type"
+            class="ann-type"
+            :class="{ negative: item.is_negative }"
+          >
             {{ item.type }}
           </span>
         </div>
-        <div v-if="item.date" class="ann-date">{{ item.date }}</div>
+        <div
+          v-if="item.date"
+          class="ann-date"
+        >
+          {{ item.date }}
+        </div>
       </div>
     </template>
-    <div v-else class="empty">暂无数据</div>
+    <div
+      v-else
+      class="empty"
+    >
+      暂无数据
+    </div>
   </div>
 </template>
 

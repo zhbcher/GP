@@ -34,8 +34,13 @@ function openUrl(url?: string) {
 <template>
   <div class="report-tab">
     <!-- 一致预期 -->
-    <section v-if="consensus" class="consensus">
-      <h4 class="block-title">一致预期 / 估值参考</h4>
+    <section
+      v-if="consensus"
+      class="consensus"
+    >
+      <h4 class="block-title">
+        一致预期 / 估值参考
+      </h4>
       <div class="consensus-grid">
         <div class="c-cell">
           <span class="c-label">预期EPS</span>
@@ -53,8 +58,15 @@ function openUrl(url?: string) {
     </section>
 
     <section class="block">
-      <h4 class="block-title">研报列表</h4>
-      <div v-if="infoStore.reportsLoading" class="loading">加载中...</div>
+      <h4 class="block-title">
+        研报列表
+      </h4>
+      <div
+        v-if="infoStore.reportsLoading"
+        class="loading"
+      >
+        加载中...
+      </div>
       <template v-else-if="reports.length">
         <div
           v-for="(item, idx) in reports"
@@ -63,17 +75,34 @@ function openUrl(url?: string) {
           :class="{ clickable: !!item.url }"
           @click="openUrl(item.url)"
         >
-          <div class="report-title">{{ item.title }}</div>
+          <div class="report-title">
+            {{ item.title }}
+          </div>
           <div class="report-meta">
-            <span v-if="item.org" class="report-org">{{ item.org }}</span>
-            <span v-if="item.rating" class="rating-badge" :style="{ background: ratingColor(item.rating) }">
+            <span
+              v-if="item.org"
+              class="report-org"
+            >{{ item.org }}</span>
+            <span
+              v-if="item.rating"
+              class="rating-badge"
+              :style="{ background: ratingColor(item.rating) }"
+            >
               {{ item.rating }}
             </span>
-            <span v-if="item.date" class="report-date">{{ item.date }}</span>
+            <span
+              v-if="item.date"
+              class="report-date"
+            >{{ item.date }}</span>
           </div>
         </div>
       </template>
-      <div v-else class="empty">暂无数据</div>
+      <div
+        v-else
+        class="empty"
+      >
+        暂无数据
+      </div>
     </section>
   </div>
 </template>
